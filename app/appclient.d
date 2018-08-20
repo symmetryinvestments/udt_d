@@ -1,80 +1,74 @@
 import udtwrap;
-#include "cc.h"
-#include "test_util.h"
-
-void* monitor(void*);
+import std.string;
+import std.stdio;
+import std.experimental.all;
 
 int main(string[] args)
 {
-   if ((3 != argc) || (0 == atoi(argv[2])))
-   {
-      cout << "usage: appclient server_ip server_port" << endl;
-      return 0;
-   }
+	if (args.length !=3 || args[2].isNumeric)
+	{
+		stderr.writefln("usage: appclient server_ip server_port");
+		return 0;
+	}
 
-   // Automatically start up and clean up UDT module.
-   UDTUpDown _udt_;
+	// Automatically start up and clean up UDT module.
+	UDTUpDown _udt_;
 
 	addrinfo hints, *local, *peer;
 
-   memset(&hints, 0, sizeof(struct addrinfo));
+	memset(&hints, 0, sizeof(struct addrinfo));
 
-   hints.ai_flags = AI_PASSIVE;
-   hints.ai_family = AF_INET;
-   hints.ai_socktype = SOCK_STREAM;
-   //hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	//hints.ai_socktype = SOCK_DGRAM;
 
-   if (0 != getaddrinfo(null, "9000", &hints, &local))
-   {
-      cout << "incorrect network address.\n" << endl;
-      return 0;
-   }
+	if (0 != getaddrinfo(null, "9000", &hints, &local))
+	{
+		writeln("incorrect network address.");
+		return 0;
+	}
 
-   UDTSOCKET client = UDT::socket(local.ai_family, local.ai_socktype, local.ai_protocol);
+	UDTSOCKET client = UdtSocket(local.ai_family, local.ai_socktype, local.ai_protocol);
 
-   // UDT Options
-   //UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
-   //UDT::setsockopt(client, 0, UDT_MSS, new int(9000), sizeof(int));
-   //UDT::setsockopt(client, 0, UDT_SNDBUF, new int(10000000), sizeof(int));
-   //UDT::setsockopt(client, 0, UDP_SNDBUF, new int(10000000), sizeof(int));
-   //UDT::setsockopt(client, 0, UDT_MAXBW, new int64_t(12500000), sizeof(int));
+	// UDT Options
+	//UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
+	//UDT::setsockopt(client, 0, UDT_MSS, new int(9000), sizeof(int));
+	//UDT::setsockopt(client, 0, UDT_SNDBUF, new int(10000000), sizeof(int));
+	//UDT::setsockopt(client, 0, UDP_SNDBUF, new int(10000000), sizeof(int));
+	//UDT::setsockopt(client, 0, UDT_MAXBW, new int64_t(12500000), sizeof(int));
 
-   // for rendezvous connection, enable the code below
-   /*
-   UDT::setsockopt(client, 0, UDT_RENDEZVOUS, new bool(true), sizeof(bool));
-   if (UDT::ERROR == UDT::bind(client, local.ai_addr, local.ai_addrlen))
-   {
-      cout << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
-      return 0;
-   }
-   */
+	// for rendezvous connection, enable the code below
+	/*
+	UDT::setsockopt(client, 0, UDT_RENDEZVOUS, new bool(true), sizeof(bool));
+	if (UDT::ERROR == UDT::bind(client, local.ai_addr, local.ai_addrlen))
+	{
+	cout << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
+	return 0;
+	}
+	*/
 
-   freeaddrinfo(local);
+	freeaddrinfo(local);
 
-   if (0 != getaddrinfo(argv[1], argv[2], &hints, &peer))
-   {
-      cout << "incorrect server/peer address. " << argv[1] << ":" << argv[2] << endl;
-      return 0;
-   }
+	if (0 != getaddrinfo(argv[1], argv[2], &hints, &peer))
+	{
+		writefln("incorrect server/peer address. %s:%s",args[1],args[2]);
+		return 0;
+	}
 
-   // connect to the server, implict bind
-   if (UDT::ERROR == UDT::connect(client, peer.ai_addr, peer.ai_addrlen))
-   {
-      cout << "connect: " << UDT::getlasterror().getErrorMessage() << endl;
-      return 0;
-   }
+	// connect to the server, implict bind
+	client.connect(peer.ai_addr,peer.ai_addrlen);
+	freeaddrinfo(peer);
 
-   freeaddrinfo(peer);
-
-   // using CC method
-   //CUDPBlast* cchandle = null;
-   //int temp;
-   //UDT::getsockopt(client, 0, UDT_CC, &cchandle, &temp);
-   //if (null != cchandle)
-   //   cchandle.setRate(500);
+	// using CC method
+	//CUDPBlast* cchandle = null;
+	//int temp;
+	//UDT::getsockopt(client, 0, UDT_CC, &cchandle, &temp);
+	//if (null != cchandle)
+	//   cchandle.setRate(500);
 
 	int size = 100000;
-	char* data = new char[size];
+	auto data = new char[size];
 
 	pthread_create(new pthread_t, null, monitor, &client);
 
@@ -102,7 +96,14 @@ void* monitor(void* s)
 
 	TraceInfo perf;
 
-	writefln("SendRate(Mb/s)\tRTT(ms)\tCWnd\tPktSndPeriod(us)\tRecvACK\tRecvNAK");
+	writefln(	[	"SendRate(Mb/s)",
+				"RTT(ms)",
+				"CWnd",
+				"PktSndPeriod(us)",
+				"RecvACK",
+				"RecvNAK")
+			].join("\t"
+	);
 
 	while (true)
 	{

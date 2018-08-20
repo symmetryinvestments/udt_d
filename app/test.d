@@ -64,7 +64,11 @@ int createTCPSocket(SYSSOCKET& ssock, int port = 0, bool rendezvous = false)
    enforce(getaddrinfo(null, service, &hints, &res)==0, "illegal port number or port is busy.");
 
    ssock = socket(res.ai_family, res.ai_socktype, res.ai_protocol);
-   if (bind(ssock, res.ai_addr, res.ai_addrlen) != 0)
+   try
+   {
+	   ssock.bind(res.ai_addr, res.ai_addrlen);
+   }
+   catch(Exception e)
    {
       return -1;
    }
@@ -147,11 +151,6 @@ void* Test_1_Srv(void* param)
    while (torecv > 0)
    {
       int rcvd = new_sock.recv( (char*)buffer + g_TotalNum * sizeof(int32_t) - torecv, torecv, 0);
-      if (rcvd < 0)
-      {
-         writeln("recv: ",getLastErrorMessage());
-         return null;
-      }
       torecv -= rcvd;
    }
 
@@ -160,7 +159,7 @@ void* Test_1_Srv(void* param)
    {
       if (buffer[i] != i)
       {
-         cout << "DATA ERROR " << i << " " << buffer[i] << endl;
+         writefln("DATA ERROR %s %s",i,buffer[i]);
          break;
       }
    }
@@ -200,12 +199,7 @@ void* Test_1_Cli(void* param)
    int tosend = g_TotalNum * sizeof(int32_t);
    while (tosend > 0)
    {
-      int sent = UDT::send(client, (char*)buffer + g_TotalNum * sizeof(int32_t) - tosend, tosend, 0);
-      if (sent < 0)
-      {
-         cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
-         return null;
-      }
+      int sent = client.send((char*)buffer + g_TotalNum * sizeof(int32_t) - tosend, tosend, 0);
       tosend -= sent;
    }
 
@@ -247,13 +241,7 @@ void* Test_2_Srv(void* param)
    {
       sockaddr_storage clientaddr;
       int addrlen = sizeof(clientaddr);
-      new_socks[i] = UDT::accept(serv, (sockaddr*)&clientaddr, &addrlen);
-
-      if (new_socks[i] == UDT::INVALID_SOCK)
-      {
-         writeln("accept: ",getLastErrorMessage());
-         return null;
-      }
+      new_socks[i] = serv.accept(cast(sockaddr*)&clientaddr, &addrlen);
       UDT::epoll_add_usock(eid, new_socks[i]);
    }
 
@@ -266,13 +254,13 @@ void* Test_2_Srv(void* param)
    tcp_serv.listen(1024);
 
    SYSSOCKET[] tcp_socks;
-   tcp_socks..length = g_TCPNum;
+   tcp_socks.length = g_TCPNum;
 
    foreach(i;0..g_TCPNum)
    {
       sockaddr_storage clientaddr;
       socklen_t addrlen = sizeof(clientaddr);
-      tcp_socks[i] = accept(tcp_serv, (sockaddr*)&clientaddr, &addrlen);
+      tcp_socks[i] = tcp_serv.accept(cast(sockaddr*)&clientaddr, &addrlen);
       UDT::epoll_add_ssock(eid, tcp_socks[i]);
    }
 
@@ -329,57 +317,36 @@ void* Test_2_Cli(void* param)
    // create UDT on individual ports
    for (int i = 0; i < g_IndUDTNum; ++ i)
    {
-      if (createUDTSocket(cli_socks[i], 0) < 0)
-      {
-         cout << "socket: " << UDT::getlasterror().getErrorMessage() << endl;
-         return null;
-      }
+      cli_socks[i].createUDTSocket(0);
    }
 
    // create UDT on shared port
-   if (createUDTSocket(cli_socks[g_IndUDTNum], 0) < 0)
-   {
-      cout << "socket: " << UDT::getlasterror().getErrorMessage() << endl;
-      return null;
-   }
-
+   cli_socks[g_IndUDTNum].createUDTSocket(0);
    sockaddr* addr = null;
    int size = 0;
-   addr = (sockaddr*)new sockaddr_in;
-   size = sizeof(sockaddr_in);
-   UDT::getsockname(cli_socks[g_IndUDTNum], addr, &size);
+   addr = cast(sockaddr*)new sockaddr_in;
+   size = sockaddr_in.sizeof;
+   cli_socks[g_IndUDTNum].getsockname( addr, &size);
    char sharedport[NI_MAXSERV];
    getnameinfo(addr, size, null, 0, sharedport, sizeof(sharedport), NI_NUMERICSERV);
 
    // Note that the first shared port has been created, so we start from g_IndUDTNum + 1.
-   for (int i = g_IndUDTNum + 1; i < g_UDTNum; ++ i)
+   foreach(i; g_IndUDTNum + 1 .. g_UDTNum)
    {
-      if (createUDTSocket(cli_socks[i], atoi(sharedport)) < 0)
-      {
-         cout << "socket: " << UDT::getlasterror().getErrorMessage() << endl;
-         return null;
-      }
+      cli_socks[i].createUDTSocket(sharedport.to!ushort);
    }
-   for (vector<UDTSOCKET>::iterator i = cli_socks.begin(); i != cli_socks.end(); ++ i)
+   for(ref sock;cli_scoks)
    {
-      if (connect(*i, g_Server_Port) < 0)
-      {
-         cout << "connect: " << UDT::getlasterror().getErrorMessage() << endl;
-         return null;
-      }
+      sock.connect(g_Server_Port);
    }
 
    // create TCP clients
    SYSSOCKET[] tcp_socks;
    tcp_socks.length = g_TCPNum;
-   foreach(i;0..g_TCPNum)
+   foreach(ref sock;tcp_socks)
    {
-      if (createTCPSocket(tcp_socks[i], 0) < 0)
-      {
-         return null;
-      }
-
-      tcp_connect(tcp_socks[i], g_Server_Port);
+      sock.createTCPSocket(0);
+      sock.tcp_connect(g_Server_Port);
    }
 
    // send data from both UDT and TCP clients
@@ -422,13 +389,10 @@ void* Test_3_Srv(void* param)
 
    int port = 61000;
 
-   foreach(i;0..g_UDTNum3)
+   foreach(ref sock;srv_socks)
    {
-      if (createUDTSocket(srv_socks[i], port ++, true) < 0)
-      {
-        writeln("error");
-      }
-   }
+      sock.createUDTSocket(port++,true);
+    }
 
    int peer_port = 51000;
 
@@ -458,13 +422,8 @@ void* Test_3_Cli(void* param)
 
    int port = 51000;
 
-   foreach(i;0..g_UDTNum3)
-   {
-      if (createUDTSocket(cli_socks[i], port ++, true) < 0)
-      {
-        writeln("error");
-      }
-   }
+   foreach(ref sock;cli_socks)
+   	sock.createUDTSocket(port++,true);
 
    int peer_port = 61000;
 
