@@ -7,6 +7,6 @@ https://github.com/zerovm/udt
 
 Status:
 * Dpp successfully translates UDT C headers
-* Wrapper builds but is not yet tested
+* Wrapper builds but is not yet tested.  Some pieces commented out and probably some dumb mistakes
 * Test programs are in app directory and have not yet been fully translated (do not yet build)
 
