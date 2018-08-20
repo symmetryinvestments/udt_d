@@ -1,0 +1,414 @@
+//module kaleidic.api.udtwrap;
+import core.time:Duration,msecs;
+import std.string:toStringz,fromStringz;
+import std.conv:to;
+import std.exception:enforce;
+import std.format:format;
+#include "udtc.h"
+#include <arpa/inet.h>
+
+mixin dpp.EnumD!("SocketType",__socket_type,"SOCK_");
+mixin dpp.EnumD!("Status",UDT_UDTSTATUS,"UDT_");
+mixin dpp.EnumD!("Option",UDT_UDTOpt,"UDT_");
+mixin dpp.EnumD!("ErrNo",UDT_ERRNO,"UDT_");
+mixin dpp.EnumD!("EpollOption",UDT_EPOLLOpt,"UDT_UDT_");
+
+alias AddressFamily = typeof(AF_INET);
+
+/*
+   int ffs(int) @nogc nothrow;
+    int socketpair(int, int, int, int*) @nogc nothrow;
+    int ffsl(c_long) @nogc nothrow;
+    int ffsll(long) @nogc nothrow;
+    int pselect(int, fd_set*, fd_set*, fd_set*, const(timespec)*, const(__sigset_t)*) @nogc nothrow;
+    ssize_t recvfrom(int, void*, size_t, int, sockaddr*, socklen_t*) @nogc nothrow;
+    ssize_t sendmsg(int, const(msghdr)*, int) @nogc nothrow;
+    ssize_t recvmsg(int, msghdr*, int) @nogc nothrow;
+    int udt_epoll_remove_usock(int, UDTSOCKET) @nogc nothrow;
+    cmsghdr* __cmsg_nxthdr(msghdr*, cmsghdr*) @nogc nothrow;
+    int bindresvport(int, sockaddr_in*) @nogc nothrow;
+    int bindresvport6(int, sockaddr_in6*) @nogc nothrow;
+    int select(int, fd_set*, fd_set*, fd_set*, timeval*) @nogc nothrow;
+*/
+
+
+struct SocketAddress
+{
+	sockaddr handle; // = sockaddr(AF_INET,9000,in_addr(INADDR_ANY));
+	alias handle this;
+}
+
+struct SocketAddressIn
+{
+	sockaddr_in handle = sockaddr_in(AF_INET,9000,in_addr(INADDR_ANY));
+	alias handle this;
+
+	this(sa_family_t family, ushort port, string address= null)
+	{
+		if (address.length ==0)
+		{
+			this.handle = sockaddr_in(family,port,in_addr(INADDR_ANY));
+		}
+		else
+		{
+			this.handle=sockaddr_in(family,port);
+			inet_pton(family,address.toStringz,&this.sin_addr);
+		}
+	}
+}
+
+private T getSocketOptionHelper(T)(UDTSOCKET socket, UDT_UDTOpt option)
+{
+	T ret;
+	uint retSize;
+	int result = getsockopt(socket,0,option,cast(void*)&ret,&retSize);
+	enforce(result != UDT_ERROR, format!"error getting socket option %s for %s: %s"(option,socket,getLastError()));
+	return ret;
+}
+
+private void setSocketOptionHelper(T)(UDTSOCKET socket, UDT_UDTOpt option, T value)
+{
+	T temp = value;
+	int result = setsockopt(socket,0,option,cast(void*)&temp,temp.sizeof.to!int);
+	enforce(result != UDT_ERROR, format!"error setting socket option %s for %s: %s"(option,socket,getLastError()));
+}
+/*
+   int getsockopt(int, int, int, void*, socklen_t*) @nogc nothrow;
+    int setsockopt(int, int, int, const(void)*, socklen_t) @nogc nothrow;
+    int udt_getsockopt(UDTSOCKET, int, int, void*, int*) @nogc nothrow;
+    int udt_setsockopt(UDTSOCKET, int, int, const(void)*, int) @nogc nothrow;
+*/
+
+struct SocketOptions
+{
+	@disable this(this);
+	UdtSocket socket;
+
+	int maximumPacketSize()
+	{
+    		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_MSS);
+	}
+
+	void maximumPacketSize(int size)
+	{
+		setSocketOptionHelper!int(socket.handle,Option.UDT_UDT_MSS,size);
+	}
+	
+	bool blockingSending()
+	{
+		return getSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_SNDSYN);
+	}
+
+	void blockingSending(bool mode)
+	{
+		setSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_SNDSYN,mode);
+	}
+
+	bool blockingReceiving()
+	{
+		return getSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_RCVSYN);
+	}
+
+	void blockingReceiving(bool mode)
+	{
+		setSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_RCVSYN,mode);
+	}
+
+	int maximumWindowSize()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_FC);
+	}
+
+	void maximumWindowSize(int size)
+	{
+		setSocketOptionHelper!int(socket.handle,Option.UDT_UDT_FC,size);
+	}
+
+	int udtSenderBufferSize()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_SNDBUF);
+	}
+
+	void udtSenderBufferSize(int size)
+	{
+		setSocketOptionHelper!int(socket.handle,Option.UDT_UDT_SNDBUF,size);
+	}
+
+	int udtReceiverBufferSize()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_RCVBUF);
+	}
+
+	int udpSenderBufferSize()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDP_SNDBUF);
+	}
+
+	void udpSenderBufferSize(int size)
+	{
+		setSocketOptionHelper!int(socket.handle,Option.UDT_UDP_SNDBUF,size);
+	}
+
+	int udpReceiverBufferSize()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDP_RCVBUF);
+	}
+
+	void udpReceiverBufferSize(int size)
+	{
+		setSocketOptionHelper!int(socket.handle,Option.UDT_UDP_RCVBUF,size);
+	}
+
+	linger lingerTime()
+	{
+		linger result = getSocketOptionHelper!linger(socket.handle,Option.UDT_UDT_LINGER);
+		return result;
+	}
+
+	void lingerTime(linger lingerTime)
+	{
+		setSocketOptionHelper!linger(socket.handle,Option.UDT_UDT_LINGER,lingerTime);
+	}
+
+	bool enableRendezVous()
+	{
+		return getSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_RENDEZVOUS);
+	}
+
+	void enableRendezVous(bool enable)
+	{
+		setSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_RENDEZVOUS,enable);
+	}
+
+	//void* congestionControlAlgorithm;
+	
+	Duration sendCallTimeOut()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_SNDTIMEO).msecs();
+	}
+
+	void sendCallTimeOut(Duration dur)
+	{
+		setSocketOptionHelper!int(socket.handle,Option.UDT_UDT_SNDTIMEO,dur.total!"msecs".to!int);
+	}
+
+	Duration receiveCallTimeout()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_RCVTIMEO).msecs();
+	}
+
+	void receiveCallTimeOut(Duration dur)
+	{
+		setSocketOptionHelper!int(socket.handle,Option.UDT_UDT_RCVTIMEO,dur.total!"msecs".to!int);
+	}
+
+	bool reuseAddress()
+	{
+		return 	getSocketOptionHelper!bool(socket.handle,UDT_UDT_REUSEADDR);
+	}
+
+	void reuseAddress(bool reuse)
+	{
+		setSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_REUSEADDR,reuse);
+	}
+	
+	long maximumBytesPerSecondPerConnection()
+	{
+		return getSocketOptionHelper!long(socket.handle,Option.UDT_UDT_MAXBW);
+	}
+
+	void maximumBytesPerSecondPerConnection(long bw)
+	{
+		setSocketOptionHelper!long(socket.handle,Option.UDT_UDT_MAXBW,bw);
+	}
+	
+	int state()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_STATE);
+	}
+
+	int epollEvents()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_EVENT);
+	}
+
+	int sizePendingDataSend()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_SNDDATA);
+	}
+
+	int sizePendingDataReceive()
+	{
+		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_RCVDATA);
+	}
+}
+
+shared static this()
+{
+	udt_startup();
+}
+
+shared static ~this()
+{
+	udt_cleanup();
+}
+/*
+    int select(int, fd_set*, fd_set*, fd_set*, timeval*) @nogc nothrow;
+    
+    int shutdown(int, int) @nogc nothrow;
+    int sockatmark(int) @nogc nothrow;
+    int isfdtype(int, int) @nogc nothrow;
+
+    int udt_epoll_create() @nogc nothrow;
+    int udt_epoll_add_usock(int, UDTSOCKET, const(int)*) @nogc nothrow;
+    int udt_epoll_add_ssock(int, SYSSOCKET, const(int)*) @nogc nothrow;
+    int udt_epoll_remove_ssock(int, SYSSOCKET) @nogc nothrow;
+    int udt_epoll_wait2(int, UDTSOCKET*, int*, UDTSOCKET*, int*, int64_t, SYSSOCKET*, int*, SYSSOCKET*, int*) @nogc nothrow;
+    int udt_epoll_release(int) @nogc nothrow;
+
+    */
+//alias getLastErrorCode = get_lasterror_code;
+alias clearLastError = udt_clearlasterror;
+
+string getLastError()
+{
+	return udt_getlasterror_desc().fromStringz().idup;
+}
+
+
+struct UdtSocket
+{
+	UDTSOCKET handle = -1;
+	alias handle this;
+	//@disable this(this);
+
+	int state()
+	{
+		return udt_getsockstate(this.handle);
+	}
+
+	string toString()
+	{
+		return ""; // format!"UDT socket %s; peerName %s; socketName %s"(this.handle,this.peerName(),this.socketName());
+	}
+
+	SocketAddress peerName()
+	{
+		SocketAddress ret;
+		int retLength;
+		int result = udt_getpeername(this.handle,&ret.handle,&retLength);
+		enforce(result != UDT_ERROR, format!"unable to get peername info: %s"(getLastError()));
+		return SocketAddress(ret.handle);
+	}
+
+	SocketAddress socketName()
+	{
+		SocketAddress ret;
+		int retLength;
+		int result = udt_getsockname(this.handle,&ret.handle,&retLength);
+		return SocketAddress(ret.handle);
+	}
+/*
+	ref TraceInfo perfMon(ref TraceInfo info, bool clear = true)
+	{
+		int result = udt_perfmon(this.handle,info.handle,clear);
+		enforce(result != UDT_ERROR, format!"unable to get perfmon info: %s"(getLastError()));
+		return info;
+	}
+*/
+	auto ref options()
+	{
+		return SocketOptions(UdtSocket(this.handle));
+	}
+
+	auto create(AddressFamily addressFamily, SocketType socketType, int something)
+	{
+		this.handle = udt_socket(addressFamily.to!int, socketType.to!int,something);
+		return UdtSocket(this.handle);
+	}
+
+	void bind(ref SocketAddress socketAddress)
+	{
+		int result = udt_bind(this.handle, &socketAddress.handle,socketAddress.handle.sizeof);
+		enforce(result != UDT_ERROR, format!"unable to bind to %s: %s"(socketAddress,getLastError()));
+	}
+
+	void bind2(ref UdtSocket socket)
+	{
+		int result = udt_bind2(this.handle, socket.handle);
+		enforce(result != UDT_ERROR, format!"unable to bind to UDP Socket %s: %s"(socket,getLastError()));
+	}
+
+	void connect(ref SocketAddress socketAddress)
+	{
+		int result = udt_connect(this.handle,&socketAddress.handle,socketAddress.handle.sizeof);
+		enforce(result != UDT_ERROR, format!"unable to connect to %s: %s"(socketAddress,getLastError()));
+	}
+
+	void listen(int something)
+	{
+		enforce(udt_listen(this.handle,something) != UDT_ERROR,format!"unable to bind to listen to %s: %s"(something,getLastError()));
+	}
+
+	void accept(ref SocketAddress socketAddress)
+	{
+		int retLength;
+		int result = udt_accept(this.handle, &socketAddress.handle,&retLength);
+		enforce(result != UDT_ERROR, format!"unable to bind to %s: %s"(socketAddress,getLastError()));
+	}
+
+	auto receive(out ubyte[] data, int something)
+	{
+		int result = udt_recv(this.handle,cast(char*)data.ptr,data.length.to!int,something);
+		enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
+		return result;
+	}
+
+	auto send (scope ubyte[] data, int something)
+	{
+		int result = udt_send(this.handle,cast(char*)data.ptr,data.length.to!int,something);
+		enforce(result != UDT_ERROR, format!"unable to send data of length %s: %s"(data.length,getLastError()));
+		return result;
+	}
+
+	auto receiveMessage(out ubyte[] data)
+	{
+		int result = udt_recvmsg(this.handle,cast(char*)data.ptr,data.length.to!int);
+		enforce(result != UDT_ERROR, format!"unable to receive message to buffer of length %s: %s"(data.length,getLastError()));
+		return result;
+	}
+
+	auto sendMessage(scope ubyte[] data, int something1,int something2)
+	{
+		int result = udt_sendmsg(this.handle,cast(char*)data.ptr,data.length.to!int,something1,something2);
+		enforce(result != UDT_ERROR, format!"unable to send message of length %s: %s"(data.length,getLastError()));
+		return result;
+	}
+/+
+	auto receiveFile(out ubyte[] data, int something)
+	{
+		int result = udt_recvfile2(this.handle,cast(char*)data.ptr,data.length.to!int,something);
+		enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
+		return result;
+	}
+
+	auto sendFile(scope ubyte[] data, int something)
+	{
+		int result = udt_sendfile2(this.handle,cast(char*)data.ptr,data.length.to!int,something);
+		enforce(result != UDT_ERROR, format!"unable to send file of length %s: %s"(data.length,getLastError()));
+		return result;
+	}
++/
+
+	void close()
+	{
+		int result = udt_close(this.handle);
+		enforce(result != UDT_ERROR, format!"unable to close UdtSocket : %s"(getLastError()));
+		this.handle=-1;
+	}
+	~this()
+	{
+		if (this.handle!=-1)
+			this.close();
+	}
+}

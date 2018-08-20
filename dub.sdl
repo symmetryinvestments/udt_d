@@ -1,0 +1,5 @@
+name "udt_d"
+description "Wrapper for UDT - reliable UDP protocol"
+authors "Laeeth Isharc"
+copyright "Copyright © 2018, Laeeth Isharc and Kaleidic Associates"
+license "boost"
