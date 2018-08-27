@@ -37,9 +37,9 @@ written by
    Tom Zhou, last updated 05/18/2012
 *****************************************************************************/
 
-#include "udt.h"
+#include <udt/udt.h>
 #include "udtc.h"
-#include "common.h"
+#include <udt/common.h>
 
 
 extern "C" {

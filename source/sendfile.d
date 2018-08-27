@@ -61,7 +61,7 @@ int main(string[] args)
 
 void* sendfile(void* usocket)
 {
-   UDTSOCKET fhandle = *(UDTSOCKET*)usocket;
+   UDTSOCKET fhandle = *cast(UDTSOCKET*)usocket;
    delete (UDTSOCKET*)usocket;
 
    char[1024] file;

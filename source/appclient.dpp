@@ -1,7 +1,33 @@
 import udtwrap;
+import core.thread;
+import core.time;
 import std.string;
 import std.stdio;
 import std.experimental.all;
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+//#include <netdb.h>
+#include <pthread.h>
+
+struct addrinfo
+{
+  int ai_flags;                 /* Input flags.  */
+  int ai_family;                /* Protocol family for socket.  */
+  int ai_socktype;              /* Socket type.  */
+  int ai_protocol;              /* Protocol for socket.  */
+  socklen_t ai_addrlen;         /* Length of socket address.  */
+  sockaddr *ai_addr;     /* Socket address for socket.  */
+  char *ai_canonname;           /* Canonical name for service location.  */
+  addrinfo *ai_next;     /* Pointer to next in list.  */
+}
+
+extern (C) int getaddrinfo (const char *name,
+                        const char *service,
+                        const addrinfo *req,
+                        addrinfo **pai);
+/* Free `addrinfo' structure AI including associated storage.  */
+extern (C) void freeaddrinfo (addrinfo *__ai);
 
 int main(string[] args)
 {
@@ -12,11 +38,12 @@ int main(string[] args)
 	}
 
 	// Automatically start up and clean up UDT module.
-	UDTUpDown _udt_;
+	//UDTUpDown _udt_;
 
-	addrinfo hints, *local, *peer;
+	addrinfo hints;
+	addrinfo* local, peer;
 
-	memset(&hints, 0, sizeof(struct addrinfo));
+	memset(&hints, 0, addrinfo.sizeof);
 
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_family = AF_INET;
@@ -29,7 +56,7 @@ int main(string[] args)
 		return 0;
 	}
 
-	UDTSOCKET client = UdtSocket(local.ai_family, local.ai_socktype, local.ai_protocol);
+	auto client = UdtSocket.create(cast(AddressFamily)local.ai_family, SocketType.STREAM, local.ai_protocol);
 
 	// UDT Options
 	//UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
@@ -50,14 +77,14 @@ int main(string[] args)
 
 	freeaddrinfo(local);
 
-	if (0 != getaddrinfo(argv[1], argv[2], &hints, &peer))
+	if (0 != getaddrinfo(args[1].toStringz, args[2].toStringz, &hints, &peer))
 	{
 		writefln("incorrect server/peer address. %s:%s",args[1],args[2]);
 		return 0;
 	}
 
 	// connect to the server, implict bind
-	client.connect(peer.ai_addr,peer.ai_addrlen);
+	client.connect(peer.ai_addr);
 	freeaddrinfo(peer);
 
 	// using CC method
@@ -92,24 +119,24 @@ int main(string[] args)
 
 void* monitor(void* s)
 {
-	UDTSOCKET u = *(UDTSOCKET*)s;
+	UDTSOCKET u = *cast (UDTSOCKET*)s;
 
-	TraceInfo perf;
+	//TraceInfo perf;
 
 	writefln(	[	"SendRate(Mb/s)",
 				"RTT(ms)",
 				"CWnd",
 				"PktSndPeriod(us)",
 				"RecvACK",
-				"RecvNAK")
-			].join("\t"
+				"RecvNAK",
+			].join("\t")
 	);
 
 	while (true)
 	{
-		sleep(1);
-		perf = u.perfMon(perf);
-		writefln("%s\t\t%s\t%s\t%s\t\t\t%s\t%s", perf.mbpsSendRate, perf.msRTT, perf.pktCongestionWindow, perf.usPktSndPeriod, perf.pktRecvACK, perf.pktRecvNAK);
+		Thread.sleep(1.seconds);
+		//perf = u.perfMon(perf);
+		//writefln("%s\t\t%s\t%s\t%s\t\t\t%s\t%s", perf.mbpsSendRate, perf.msRTT, perf.pktCongestionWindow, perf.usPktSndPeriod, perf.pktRecvACK, perf.pktRecvNAK);
 	}
 
 	return null;

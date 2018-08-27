@@ -321,10 +321,9 @@ struct UdtSocket
 		return SocketOptions(UdtSocket(this.handle));
 	}
 
-	auto create(AddressFamily addressFamily, SocketType socketType, int something)
+	static auto create(AddressFamily addressFamily, SocketType socketType, int something)
 	{
-		this.handle = udt_socket(addressFamily.to!int, socketType.to!int,something);
-		return UdtSocket(this.handle);
+		return UdtSocket(udt_socket(addressFamily.to!int, socketType.to!int,something));
 	}
 
 	void bind(ref SocketAddress socketAddress)
@@ -384,21 +383,22 @@ struct UdtSocket
 		enforce(result != UDT_ERROR, format!"unable to send message of length %s: %s"(data.length,getLastError()));
 		return result;
 	}
-/+
-	auto receiveFile(out ubyte[] data, int something)
+
+	auto receiveFile(out ubyte[] data, ref long offset, int block)
 	{
-		int result = udt_recvfile2(this.handle,cast(char*)data.ptr,data.length.to!int,something);
+		long result = udt_recvfile2(this.handle,cast(char*)data.ptr,&offset, data.length.to!long,block);
 		enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
+		data.length = result;
 		return result;
 	}
 
-	auto sendFile(scope ubyte[] data, int something)
+	auto sendFile(scope ubyte[] data, ref long offset, int block)
 	{
-		int result = udt_sendfile2(this.handle,cast(char*)data.ptr,data.length.to!int,something);
+		long result = udt_sendfile2(this.handle,cast(char*)data.ptr,&offset,data.length.to!long,block);
 		enforce(result != UDT_ERROR, format!"unable to send file of length %s: %s"(data.length,getLastError()));
 		return result;
 	}
-+/
+
 
 	void close()
 	{
