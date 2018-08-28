@@ -3,10 +3,12 @@ import core.thread;
 import core.time;
 import std.string;
 import std.stdio;
-import std.experimental.all;
-#include <arpa/inet.h>
+import std.conv:to;
+import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+
+//#include <arpa/inet.h>
 #include <sys/types.h>
-#include <sys/socket.h>
+//#include <sys/socket.h>
 //#include <netdb.h>
 #include <pthread.h>
 
@@ -31,24 +33,19 @@ extern (C) void freeaddrinfo (addrinfo *__ai);
 
 int main(string[] args)
 {
-	if (args.length !=3 || args[2].isNumeric)
+	if (args.length !=3 || !args[2].isNumeric)
 	{
 		stderr.writefln("usage: appclient server_ip server_port");
 		return 0;
 	}
 
-	// Automatically start up and clean up UDT module.
-	//UDTUpDown _udt_;
-
 	addrinfo hints;
 	addrinfo* local, peer;
 
-	memset(&hints, 0, addrinfo.sizeof);
-
-	hints.ai_flags = AI_PASSIVE;
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	//hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
+	hints.ai_family = AddressFamily.INET.to!int;
+	//hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SocketType.STREAM.to!int;
 
 	if (0 != getaddrinfo(null, "9000", &hints, &local))
 	{
@@ -59,20 +56,18 @@ int main(string[] args)
 	auto client = UdtSocket.create(cast(AddressFamily)local.ai_family, SocketType.STREAM, local.ai_protocol);
 
 	// UDT Options
+	//client.options.udtSenderBufferSize(10000000);
+	//client.options.udpSenderBufferSize(10000000);
+	//client.options.maximumBytesPerSecondPerConnection(12500000);
+	
 	//UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
 	//UDT::setsockopt(client, 0, UDT_MSS, new int(9000), sizeof(int));
-	//UDT::setsockopt(client, 0, UDT_SNDBUF, new int(10000000), sizeof(int));
-	//UDT::setsockopt(client, 0, UDP_SNDBUF, new int(10000000), sizeof(int));
-	//UDT::setsockopt(client, 0, UDT_MAXBW, new int64_t(12500000), sizeof(int));
 
 	// for rendezvous connection, enable the code below
 	/*
-	UDT::setsockopt(client, 0, UDT_RENDEZVOUS, new bool(true), sizeof(bool));
-	if (UDT::ERROR == UDT::bind(client, local.ai_addr, local.ai_addrlen))
-	{
-	cout << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
-	return 0;
-	}
+	client.options.enableRendezVous(true);
+	auto localAddr = SocketAddress(local.ai_addr);
+	client.bind(localAddr);
 	*/
 
 	freeaddrinfo(local);
@@ -84,7 +79,8 @@ int main(string[] args)
 	}
 
 	// connect to the server, implict bind
-	client.connect(peer.ai_addr);
+	auto peerAddress = SocketAddress(*peer.ai_addr);
+	client.connect(peerAddress);
 	freeaddrinfo(peer);
 
 	// using CC method
@@ -94,22 +90,22 @@ int main(string[] args)
 	//if (null != cchandle)
 	//   cchandle.setRate(500);
 
-	int size = 100000;
-	auto data = new char[size];
+	ubyte[] data;
+	data.length = 100000;
 
-	pthread_create(new pthread_t, null, monitor, &client);
+	pthread_create(new pthread_t, null, &monitor, cast(void*)&client);
 
 	foreach(i;0.. 1000000)
 	{
 		int ssize = 0;
 		int ss;
-		while (ssize < size)
+		while (ssize < data.length)
 		{
-			ss = client.send(data + ssize, size - ssize, 0);
+			ss = client.send(data[ssize..data.length.to!int - ssize], 0);
 			ssize += ss;
 		}
 
-		if (ssize < size)
+		if (ssize < data.length)
 			break;
 	}
 
@@ -117,9 +113,9 @@ int main(string[] args)
 	return 0;
 }
 
-void* monitor(void* s)
+extern(C) void* monitor(void* s)
 {
-	UDTSOCKET u = *cast (UDTSOCKET*)s;
+	auto u = * cast(UdtSocket*) s;
 
 	//TraceInfo perf;
 
