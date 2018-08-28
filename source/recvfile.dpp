@@ -10,13 +10,11 @@ int main(string[] args)
 	}
 
 	addrinfo hints, *peer;
-
-	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
-	UDTSOCKET fhandle = UDT::socket(hints.ai_family, hints.ai_socktype, hints.ai_protocol);
+	auto fhandle = UdtSocket(AddressFamily.INET, AddressInfoFlags.PASSIVE,SocketType.STREAM,hints.ai_protocol);
 
 	if (0 != getaddrinfo(argv[1], argv[2], &hints, &peer))
 	{
@@ -25,8 +23,7 @@ int main(string[] args)
 	}
 
 	// connect to the server, implict bind
-	fhandle.connect(peer.ai_addr, peer.ai_addrlen);
-
+	fhandle.connect(SocketAddress(peer.ai_addr));
 	freeaddrinfo(peer);
 
 

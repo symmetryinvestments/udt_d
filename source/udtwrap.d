@@ -1485,8 +1485,9 @@ import std.string:toStringz,fromStringz;
 import std.conv:to;
 import std.exception:enforce;
 import std.format:format;
+import std.socket:SocketType;
 
-mixin dpp.EnumD!("SocketType",__socket_type,"SOCK_");
+
 mixin dpp.EnumD!("Status",UDT_UDTSTATUS,"UDT_");
 mixin dpp.EnumD!("Option",UDT_UDTOpt,"UDT_");
 mixin dpp.EnumD!("ErrNo",UDT_ERRNO,"UDT_");
@@ -1521,9 +1522,9 @@ struct SocketAddressIn
 private T getSocketOptionHelper(T)(UDTSOCKET socket, UDT_UDTOpt option)
 {
  T ret;
- uint retSize;
+ uint retSize=ret.sizeof;
  int result = getsockopt(socket,0,option,cast(void*)&ret,&retSize);
- enforce(result != UDT_ERROR, format!"error getting socket option %s for %s: %s"(option,socket,getLastError()));
+ enforce(result != UDT_ERROR, format!"error (%s) getting socket option %s for %s: %s"(result,option,socket,getLastError()));
  return ret;
 }
 
@@ -1531,7 +1532,7 @@ private void setSocketOptionHelper(T)(UDTSOCKET socket, UDT_UDTOpt option, T val
 {
  T temp = value;
  int result = setsockopt(socket,0,option,cast(void*)&temp,temp.sizeof.to!int);
- enforce(result != UDT_ERROR, format!"error setting socket option %s for %s: %s"(option,socket,getLastError()));
+ enforce(result != UDT_ERROR, format!"error (%s) setting socket option %s for %s: %s"(result,option,socket,getLastError()));
 }
 
 
@@ -1598,6 +1599,11 @@ struct SocketOptions
  int udtReceiverBufferSize()
  {
   return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_RCVBUF);
+ }
+
+ void udtReceiverBufferSize(int size)
+ {
+  setSocketOptionHelper!int(socket.handle,Option.UDT_UDT_RCVBUF,size);
  }
 
  int udpSenderBufferSize()
@@ -1793,7 +1799,7 @@ struct UdtSocket
   enforce(result != UDT_ERROR, format!"unable to bind to %s: %s"(socketAddress,getLastError()));
  }
 
- auto receive(out ubyte[] data, int something)
+ auto receive(scope const ubyte[] data, int something) const
  {
   int result = udt_recv(this.handle,cast(char*)data.ptr,data.length.to!int,something);
   enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
@@ -1807,7 +1813,7 @@ struct UdtSocket
   return result;
  }
 
- auto receiveMessage(out ubyte[] data)
+ auto receiveMessage(scope const ubyte[] data)
  {
   int result = udt_recvmsg(this.handle,cast(char*)data.ptr,data.length.to!int);
   enforce(result != UDT_ERROR, format!"unable to receive message to buffer of length %s: %s"(data.length,getLastError()));
