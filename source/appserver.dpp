@@ -80,38 +80,37 @@ int main(string[] args)
 
 	sockaddr_storage clientaddr;
 
-	import core.memory;
-	GC.disable();
+	import std.concurrency:spawn;
 	while (true)
 	{
 		auto clientAddr = SocketAddress(*cast(sockaddr*)&clientaddr);
-		serv.accept(clientAddr);
+		serv.accept(aiAddr);
 		char[NI_MAXHOST]  clienthost;
 		char[NI_MAXSERV]  clientservice;
 		getnameinfo(cast(sockaddr *)&clientaddr, clientaddr.sizeof.to!int, clienthost.ptr, clienthost.length.to!int, clientservice.ptr, clientservice.length.to!int, AddressInfoFlags.NUMERICHOST); // | AddressInfoFlags.NUMERICSERV);
-		//writefln("new connection: %s:%s" ,clienthost.ptr.fromStringz,clientservice.ptr.fromStringz);
+		writefln("new connection: %s:%s" ,clienthost.ptr.fromStringz,clientservice.ptr.fromStringz);
 
-		pthread_t rcvthread;
-		pthread_create(&rcvthread, null, &recvdata, cast(void*)&serv);
-		pthread_detach(rcvthread);
+		spawn(&recvData,cast(immutable)&serv);
 	}
 
 	serv.close();
 	return 0;
 }
 
-extern(C) void* recvdata(void* usocket)
+void recvData(immutable(UdtSocket)* usocket)
 {
-	auto recver = *cast(UdtSocket*)usocket;
+	auto recver = UdtSocket((*usocket).handle);
 	ubyte[100000] data;
-
+	auto len = recver.receive(data[],0);
+	writeln("received message of %s",len);
+/+
 	while (true)
 	{
 		int rsize = 0;
 		int rs;
 		while (rsize < data.length)
 		{
-			recver.options.udtReceiverBufferSize(int.sizeof.to!int);
+			//recver.options.udtReceiverBufferSize(int.sizeof.to!int);
 			auto slice = data[rsize..$];
 			rs = recver.receive(slice, 0);
 			rsize += rs;
@@ -119,8 +118,6 @@ extern(C) void* recvdata(void* usocket)
 
 		if (rsize < data.length)
 			break;
-	}
-
+	} +/
 	recver.close();
-	return null;
 }

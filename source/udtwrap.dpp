@@ -362,7 +362,7 @@ struct UdtSocket
 		enforce(result != UDT_ERROR, format!"unable to bind to %s: %s"(socketAddress,getLastError()));
 	}
 
-	auto receive(out ubyte[] data, int something)
+	auto receive(scope const ubyte[] data, int something) const
 	{
 		int result = udt_recv(this.handle,cast(char*)data.ptr,data.length.to!int,something);
 		enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
@@ -376,7 +376,7 @@ struct UdtSocket
 		return result;
 	}
 
-	auto receiveMessage(out ubyte[] data)
+	auto receiveMessage(scope const ubyte[] data)
 	{
 		int result = udt_recvmsg(this.handle,cast(char*)data.ptr,data.length.to!int);
 		enforce(result != UDT_ERROR, format!"unable to receive message to buffer of length %s: %s"(data.length,getLastError()));
