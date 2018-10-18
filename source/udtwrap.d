@@ -973,7 +973,7 @@ import std.exception:enforce;
 import std.format:format;
 import std.socket:SocketType;
 
-
+mixin dpp.EnumD!("SocketType",__socket_type,"SOCK_");
 mixin dpp.EnumD!("Status",UDT_UDTSTATUS,"UDT_");
 mixin dpp.EnumD!("Option",UDT_UDTOpt,"UDT_");
 mixin dpp.EnumD!("ErrNo",UDT_ERRNO,"UDT_");
@@ -1265,7 +1265,9 @@ struct UdtSocket
 
  static auto create(AddressFamily addressFamily, SocketType socketType, int something)
  {
-  return UdtSocket(udt_socket(addressFamily.to!int, socketType.to!int,something));
+  int result = udt_socket(addressFamily.to!int, socketType.to!int,something);
+  enforce(result != UDT_INVALID_SOCK, format!"unable to create UdtSocket: %s"(getLastError()));
+  return UdtSocket(result);
  }
 
  void bind(ref SocketAddress socketAddress)

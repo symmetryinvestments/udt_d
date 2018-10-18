@@ -62,7 +62,8 @@ int main(string[] args)
 		return 0;
 	}
 
-	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily, SocketType.STREAM, res.ai_protocol);
+	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily,
+			to!SocketType(res.ai_socktype), res.ai_protocol);
 
 	// UDT Options
 	//UDT::setsockopt(serv, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
@@ -71,7 +72,9 @@ int main(string[] args)
 	//UDT::setsockopt(serv, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
 
 	auto aiAddr = SocketAddress(*res.ai_addr);
+	writeln("before bind");
 	serv.bind(aiAddr);
+	writeln("after bind");
 
 	freeaddrinfo(res);
 
@@ -90,16 +93,16 @@ int main(string[] args)
 		getnameinfo(cast(sockaddr *)&clientaddr, clientaddr.sizeof.to!int, clienthost.ptr, clienthost.length.to!int, clientservice.ptr, clientservice.length.to!int, AddressInfoFlags.NUMERICHOST); // | AddressInfoFlags.NUMERICSERV);
 		writefln("new connection: %s:%s" ,clienthost.ptr.fromStringz,clientservice.ptr.fromStringz);
 
-		spawn(&recvData,cast(immutable)&serv);
+		spawn(&recvData, cast(shared)&serv);
 	}
 
 	serv.close();
 	return 0;
 }
 
-void recvData(immutable(UdtSocket)* usocket)
+/*void recvData(shared(UdtSocket)* usocket)
 {
-	auto recver = UdtSocket((*usocket).handle);
+	auto recver = UdtSocket((*cast()usocket).handle);
 	ubyte[100000] data;
 	auto len = recver.receive(data[],0);
 	writeln("received message of %s",len);
@@ -120,4 +123,41 @@ void recvData(immutable(UdtSocket)* usocket)
 			break;
 	} +/
 	recver.close();
+}*/
+
+void recvData(shared(UdtSocket)* usocket) {
+	UdtSocket recver = UdtSocket(usocket.handle);
+	enum Size = 100000;
+	ubyte[Size] data;
+
+	while(true) {
+		int rsize;
+		int rs;
+
+		while(rsize < Size) {
+			int rcv_size;
+			int var_size = int.sizeof;
+
+			writeln("before getsockopt");
+			udt_getsockopt(usocket.handle, 0, UDT_UDTOpt.UDT_UDT_RCVDATA, &rcv_size, &var_size);
+			writeln("after getsockopt");
+			if(UDT_ERROR == 
+					(rs = udt_recv(usocket.handle, cast(char*)(data.ptr + rsize), Size - rsize, 0)))
+			{
+				writefln("recv: %s", getLastError());
+				break;
+			}
+			writeln("after recv");
+
+			rsize += rs;
+		}
+
+		if(rsize < Size) {
+			break;
+		}
+	}
+
+	writeln("before close");
+	udt_close(recver);
+	writeln("after close");
 }
