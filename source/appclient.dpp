@@ -101,7 +101,11 @@ int main(string[] args)
 		int ss;
 		while (ssize < data.length)
 		{
-			ss = client.send(data[ssize..data.length.to!int - ssize], 0);
+			//writefln!"%d %d %d"(ssize, data.length.to!int, data.length);
+			ss = client.send(data[ssize .. $], 0);
+			if(ss == UDT_ERROR) {
+				writefln!"ERROR %d"(ss);
+			}
 			ssize += ss;
 		}
 
@@ -117,7 +121,7 @@ extern(C) void* monitor(void* s)
 {
 	auto u = * cast(UdtSocket*) s;
 
-	//TraceInfo perf;
+	TraceInfo perf;
 
 	writefln(	[	"SendRate(Mb/s)",
 				"RTT(ms)",
@@ -131,8 +135,8 @@ extern(C) void* monitor(void* s)
 	while (true)
 	{
 		Thread.sleep(1.seconds);
-		//perf = u.perfMon(perf);
-		//writefln("%s\t\t%s\t%s\t%s\t\t\t%s\t%s", perf.mbpsSendRate, perf.msRTT, perf.pktCongestionWindow, perf.usPktSndPeriod, perf.pktRecvACK, perf.pktRecvNAK);
+		perf = u.perfMon(perf);
+		writefln("%s\t\t%s\t%s\t%s\t\t\t%s\t%s", perf.mbpsSendRate, perf.msRTT, perf.pktCongestionWindow, perf.usPktSndPeriod, perf.pktRecvACK, perf.pktRecvNAK);
 	}
 
 	return null;

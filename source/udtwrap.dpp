@@ -281,6 +281,11 @@ string getLastError()
 	return udt_getlasterror_desc().fromStringz().idup;
 }
 
+struct TraceInfo {
+	UDT_TRACEINFO handle;
+	alias handle this;
+}
+
 
 struct UdtSocket
 {
@@ -314,14 +319,14 @@ struct UdtSocket
 		int result = udt_getsockname(this.handle,&ret.handle,&retLength);
 		return SocketAddress(ret.handle);
 	}
-/*
+
 	ref TraceInfo perfMon(ref TraceInfo info, bool clear = true)
 	{
-		int result = udt_perfmon(this.handle,info.handle,clear);
+		int result = udt_perfmon(this.handle, &info.handle, clear);
 		enforce(result != UDT_ERROR, format!"unable to get perfmon info: %s"(getLastError()));
 		return info;
 	}
-*/
+
 	auto ref options()
 	{
 		return SocketOptions(UdtSocket(this.handle));
