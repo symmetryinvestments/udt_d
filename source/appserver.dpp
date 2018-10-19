@@ -2,15 +2,18 @@ import udtwrap;
 import core.thread;
 import core.time;
 import std.string;
+import std.format : format;
 import std.stdio;
 import std.conv:to;
 import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+static import core.sys.posix.netdb;
 
 //#include <arpa/inet.h>
 //#include <sys/types.h>
 //#include <sys/socket.h>
 //#include <netdb.h>
-#include <pthread.h>
+//#include <pthread.h>
+
 
 struct addrinfo
 {
@@ -48,10 +51,13 @@ int main(string[] args)
 	}
 
 	addrinfo hints;
+    memset(&hints, 0, addrinfo.sizeof);
+
 	addrinfo* res;
 
 	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
-	hints.ai_family = AddressFamily.INET.to!int;
+	//hints.ai_family = AddressFamily.INET.to!int;
+	hints.ai_family = AddressFamily.UNSPEC.to!int;
 	hints.ai_socktype = SocketType.STREAM; // DGRAM
 
 	string service = (args.length == 2) ? args[1] : "9000";
@@ -62,7 +68,8 @@ int main(string[] args)
 		return 0;
 	}
 
-	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily, SocketType.STREAM, res.ai_protocol);
+	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily,
+			to!SocketType(res.ai_socktype), res.ai_protocol);
 
 	// UDT Options
 	//UDT::setsockopt(serv, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
@@ -78,46 +85,46 @@ int main(string[] args)
 	writefln("server is ready at port: %s" ,service);
 	serv.listen(10);
 
-	sockaddr_storage clientaddr;
+	SocketAddressStorage clientAddr;
+	UdtSocket recver;
 
-	import std.concurrency:spawn;
 	while (true)
 	{
-		auto clientAddr = SocketAddress(*cast(sockaddr*)&clientaddr);
-		serv.accept(aiAddr);
-		char[NI_MAXHOST]  clienthost;
-		char[NI_MAXSERV]  clientservice;
-		getnameinfo(cast(sockaddr *)&clientaddr, clientaddr.sizeof.to!int, clienthost.ptr, clienthost.length.to!int, clientservice.ptr, clientservice.length.to!int, AddressInfoFlags.NUMERICHOST); // | AddressInfoFlags.NUMERICSERV);
-		writefln("new connection: %s:%s" ,clienthost.ptr.fromStringz,clientservice.ptr.fromStringz);
+		import std.concurrency:spawn;
+		serv.accept(recver, clientAddr);
 
-		spawn(&recvData,cast(immutable)&serv);
+		clientAddr.getNameInfo();
+
+		writefln("new connection: %s:%s" , clientAddr.clientHost, clientAddr.clientService);
+
+		spawn(&recvData, cast(shared)&recver);
 	}
 
 	serv.close();
 	return 0;
 }
 
-void recvData(immutable(UdtSocket)* usocket)
-{
-	auto recver = UdtSocket((*usocket).handle);
-	ubyte[100000] data;
-	auto len = recver.receive(data[],0);
-	writeln("received message of %s",len);
-/+
-	while (true)
-	{
-		int rsize = 0;
+void recvData(shared(UdtSocket)* usocket) {
+	UdtSocket recver;
+	recver = *cast()usocket;
+
+	enum Size = 100000;
+	ubyte[Size] data;
+
+	while(true) {
+		int rsize;
 		int rs;
-		while (rsize < data.length)
-		{
-			//recver.options.udtReceiverBufferSize(int.sizeof.to!int);
-			auto slice = data[rsize..$];
-			rs = recver.receive(slice, 0);
-			rsize += rs;
+
+		while(rsize < Size) {
+			int bytesReceived = recver.receive(data[rsize .. $]);
+			//writefln!"%7d %7d"(bytesReceived, rsize);
+			rsize += bytesReceived;
 		}
 
-		if (rsize < data.length)
+		if(rsize < Size) {
 			break;
-	} +/
+		}
+	}
+
 	recver.close();
 }
