@@ -1,0 +1,143 @@
+import udtwrap;
+import core.thread;
+import core.time;
+import std.string;
+import std.stdio;
+import std.conv:to;
+import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+
+//#include <arpa/inet.h>
+#include <sys/types.h>
+//#include <sys/socket.h>
+//#include <netdb.h>
+#include <pthread.h>
+
+struct addrinfo
+{
+  int ai_flags;                 /* Input flags.  */
+  int ai_family;                /* Protocol family for socket.  */
+  int ai_socktype;              /* Socket type.  */
+  int ai_protocol;              /* Protocol for socket.  */
+  socklen_t ai_addrlen;         /* Length of socket address.  */
+  sockaddr *ai_addr;     /* Socket address for socket.  */
+  char *ai_canonname;           /* Canonical name for service location.  */
+  addrinfo *ai_next;     /* Pointer to next in list.  */
+}
+
+extern (C) int getaddrinfo (const char *name,
+                        const char *service,
+                        const addrinfo *req,
+                        addrinfo **pai);
+/* Free `addrinfo' structure AI including associated storage.  */
+extern (C) void freeaddrinfo (addrinfo *__ai);
+
+int main(string[] args)
+{
+	if (args.length !=3 || !args[2].isNumeric)
+	{
+		stderr.writefln("usage: appclient server_ip server_port");
+		return 0;
+	}
+
+	addrinfo hints;
+	addrinfo* local, peer;
+
+	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
+	hints.ai_family = AddressFamily.INET.to!int;
+	//hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SocketType.STREAM.to!int;
+
+	if (0 != getaddrinfo(null, "9000", &hints, &local))
+	{
+		writeln("incorrect network address.");
+		return 0;
+	}
+
+	auto client = UdtSocket.create(cast(AddressFamily)local.ai_family, SocketType.STREAM, local.ai_protocol);
+
+	// UDT Options
+	//client.options.udtSenderBufferSize(10000000);
+	//client.options.udpSenderBufferSize(10000000);
+	//client.options.maximumBytesPerSecondPerConnection(12500000);
+	
+	//UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
+	//UDT::setsockopt(client, 0, UDT_MSS, new int(9000), sizeof(int));
+
+	// for rendezvous connection, enable the code below
+	/*
+	client.options.enableRendezVous(true);
+	auto localAddr = SocketAddress(local.ai_addr);
+	client.bind(localAddr);
+	*/
+
+	freeaddrinfo(local);
+
+	if (0 != getaddrinfo(args[1].toStringz, args[2].toStringz, &hints, &peer))
+	{
+		writefln("incorrect server/peer address. %s:%s",args[1],args[2]);
+		return 0;
+	}
+
+	// connect to the server, implict bind
+	auto peerAddress = SocketAddress(*peer.ai_addr);
+	client.connect(peerAddress);
+	freeaddrinfo(peer);
+
+	// using CC method
+	//CUDPBlast* cchandle = null;
+	//int temp;
+	//UDT::getsockopt(client, 0, UDT_CC, &cchandle, &temp);
+	//if (null != cchandle)
+	//   cchandle.setRate(500);
+
+	ubyte[] data;
+	data.length = 100000;
+
+	pthread_create(new pthread_t, null, &monitor, cast(void*)&client);
+
+	foreach(i;0.. 1000000)
+	{
+		int ssize = 0;
+		int ss;
+		while (ssize < data.length)
+		{
+			//writefln!"%d %d %d"(ssize, data.length.to!int, data.length);
+			ss = client.send(data[ssize .. $], 0);
+			if(ss == UDT_ERROR) {
+				writefln!"ERROR %d"(ss);
+			}
+			ssize += ss;
+		}
+
+		if (ssize < data.length)
+			break;
+	}
+
+	client.close();
+	return 0;
+}
+
+extern(C) void* monitor(void* s)
+{
+	auto u = * cast(UdtSocket*) s;
+
+	TraceInfo perf;
+
+	writefln(	[	"SendRate(Mb/s)",
+				"RTT(ms)",
+				"CWnd",
+				"PktSndPeriod(us)",
+				"RecvACK",
+				"RecvNAK",
+			].join("\t")
+	);
+
+	while (true)
+	{
+		Thread.sleep(1.seconds);
+		perf = u.perfMon(perf);
+		writefln("%s\t\t%s\t%s\t%s\t\t\t%s\t%s", perf.mbpsSendRate, perf.msRTT, perf.pktCongestionWindow, perf.usPktSndPeriod, perf.pktRecvACK, perf.pktRecvNAK);
+	}
+
+	return null;
+}

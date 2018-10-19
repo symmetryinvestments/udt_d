@@ -13,7 +13,6 @@ int main(string[] args)
    addrinfo hints;
    addrinfo* res;
 
-   memset(&hints, 0, sizeof(struct addrinfo));
    hints.ai_flags = AI_PASSIVE;
    hints.ai_family = AF_INET;
    hints.ai_socktype = SOCK_STREAM;
@@ -61,7 +60,7 @@ int main(string[] args)
 
 void* sendfile(void* usocket)
 {
-   UDTSOCKET fhandle = *(UDTSOCKET*)usocket;
+   UDTSOCKET fhandle = *cast(UDTSOCKET*)usocket;
    delete (UDTSOCKET*)usocket;
 
    char[1024] file;
