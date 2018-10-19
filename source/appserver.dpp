@@ -158,6 +158,6 @@ void recvData(shared(UdtSocket)* usocket) {
 	}
 
 	writeln("before close");
-	udt_close(recver);
+	//udt_close(recver);
 	writeln("after close");
 }
