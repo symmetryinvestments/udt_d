@@ -980,10 +980,10 @@ mixin dpp.EnumD!("ErrNo",UDT_ERRNO,"UDT_");
 mixin dpp.EnumD!("EpollOption",UDT_EPOLLOpt,"UDT_UDT_");
 
 alias AddressFamily = typeof(2);
-extern(C) int getnameinfo(
-  const sockaddr *addr, socklen_t addrlen,
-  char *host, socklen_t hostlen,
-  char *serv, socklen_t servlen, int flags);
+extern (C) int getnameinfo (const sockaddr *sa,
+                        socklen_t __salen, char *host,
+                        socklen_t __hostlen, char *serv,
+                        socklen_t __servlen, int __flags);
 
 extern(C) char* gai_strerror(int errcode);
 
@@ -992,19 +992,23 @@ struct SocketAddress
  sockaddr handle;
  alias handle this;
 
- void getNameInfo(char[] clienthost, char[] clientservice) {
+}
+struct SocketAddressStorage {
+ sockaddr_storage handle;
+
+
+ void getNameInfo() {
+  enum NI_MAXHOST=200;
+  enum NI_MAXSERV = 200;
+  char[NI_MAXHOST] clienthost;
+  char[NI_MAXSERV] clientservice;
   static import core.sys.posix.netdb;
 
-  int addrlen = to!int(this.handle.sizeof);
-  int rslt = getnameinfo(cast(sockaddr*)&this.handle, addrlen,
+  int rslt = getnameinfo(cast(sockaddr*)&this.handle, this.handle.sizeof.to!int,
    clienthost.ptr, clienthost.length.to!int,
    clientservice.ptr, clientservice.length.to!int,
 
    AddressInfoFlags.NUMERICHOST);
-
-  enforce(rslt == 0,
-   format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz())
-  );
  }
 }
 

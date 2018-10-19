@@ -87,25 +87,19 @@ int main(string[] args)
 	writefln("server is ready at port: %s" ,service);
 	serv.listen(10);
 
-	sockaddr_storage clientaddr;
-	int addrlen = sockaddr_storage.sizeof;
-
+	SocketAddressStorage clientAddr;
 	UdtSocket recver;
 
 	import std.concurrency:spawn;
 	while (true)
 	{
 		writeln("accepted connection");
-		auto clientAddr = SocketAddress(*cast(sockaddr*)&clientaddr);
 		serv.accept(recver, aiAddr);
 
 		char[NI_MAXHOST] clienthost;
 		char[NI_MAXSERV] clientservice;
 		writeln("before getnameinfo");
-		//clientAddr.getNameInfo(clienthost, clientservice);
-		getnameinfo(cast(sockaddr *)&clientaddr, clientaddr.sizeof.to!int, clienthost.ptr, clienthost.length.to!int, clientservice.ptr, clientservice.length.to!int, 
-		AddressInfoFlags.NUMERICHOST); // | AddressInfoFlags.NUMERICSERV);
-		//	AddressInfoFlags.NUMERICHOST|core.sys.posix.netdb.NI_NUMERICSERV);
+		clientAddr.getNameInfo();
 		writeln("after getnameinfo");
 
 		writefln("new connection: %s:%s" ,clienthost.ptr.fromStringz,clientservice.ptr.fromStringz);
@@ -157,15 +151,12 @@ void recvData(shared(UdtSocket)* usocket) {
 			int rcv_size;
 			int var_size = int.sizeof;
 
-			writeln("before getsockopt");
 			udt_getsockopt(recver.handle, 0, UDT_UDTOpt.UDT_UDT_RCVDATA, &rcv_size, &var_size);
-			writeln("after getsockopt");
 			if(UDT_ERROR == 
 					(rs = udt_recv(recver.handle, cast(char*)(data.ptr + rsize), Size - rsize, 0)))
 			{
 				throw new Exception(format("recv: %s", getLastError()));
 			}
-			writeln("after recv");
 
 			rsize += rs;
 		}
@@ -175,7 +166,5 @@ void recvData(shared(UdtSocket)* usocket) {
 		}
 	}
 
-	writeln("before close");
-	udt_close(recver);
-	writeln("after close");
+	recver.close();
 }

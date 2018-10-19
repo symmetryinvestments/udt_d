@@ -32,10 +32,10 @@ alias AddressFamily = typeof(AF_INET);
     int select(int, fd_set*, fd_set*, fd_set*, timeval*) @nogc nothrow;
 */
 
-extern(C) int getnameinfo(
-		const sockaddr *addr, socklen_t addrlen,
-		char *host, socklen_t hostlen,
-		char *serv, socklen_t servlen, int flags);
+extern (C) int getnameinfo (const sockaddr *sa,
+                        socklen_t __salen, char *host,
+                        socklen_t __hostlen, char *serv,
+                        socklen_t __servlen, int __flags);
 
 extern(C) char* gai_strerror(int errcode);
 
@@ -44,19 +44,32 @@ struct SocketAddress
 	sockaddr handle; // = sockaddr(AF_INET,9000,in_addr(INADDR_ANY));
 	alias handle this;
 
-	void getNameInfo(char[] clienthost, char[] clientservice) {
+}
+struct SocketAddressStorage {
+	sockaddr_storage handle;
+
+	//void getNameInfo(char[] clienthost, char[] clientservice) {
+	void getNameInfo() {
+		enum NI_MAXHOST=200;
+		enum NI_MAXSERV = 200;
+		char[NI_MAXHOST] clienthost;
+		char[NI_MAXSERV] clientservice;
 		static import core.sys.posix.netdb;
 
-		int addrlen = to!int(this.handle.sizeof);
-		int rslt = getnameinfo(cast(sockaddr*)&this.handle, addrlen, 
+		int rslt = getnameinfo(cast(sockaddr*)&this.handle, this.handle.sizeof.to!int, 
 			clienthost.ptr, clienthost.length.to!int,
 			clientservice.ptr, clientservice.length.to!int,
 			//AddressInfoFlags.NUMERICHOST|core.sys.posix.netdb.NI_NUMERICSERV);
 			AddressInfoFlags.NUMERICHOST);
 
-		enforce(rslt == 0, 
-			format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz())
-		);
+		//int rslt = getnameinfo(cast(sockaddr *)&clientAddr.handle, clientAddr.handle.sizeof.to!int, 
+		//	clienthost.ptr, clienthost.length.to!int, 
+		//	clientservice.ptr, clientservice.length.to!int, 
+		//AddressInfoFlags.NUMERICHOST); // | AddressInfoFlags.NUMERICSERV);
+
+		//enforce(rslt == 0, 
+		//	format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz())
+		//);
 	}
 }
 
