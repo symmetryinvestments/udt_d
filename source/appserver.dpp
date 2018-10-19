@@ -6,12 +6,14 @@ import std.format : format;
 import std.stdio;
 import std.conv:to;
 import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+static import core.sys.posix.netdb;
 
 //#include <arpa/inet.h>
 //#include <sys/types.h>
 //#include <sys/socket.h>
 //#include <netdb.h>
-#include <pthread.h>
+//#include <pthread.h>
+
 
 struct addrinfo
 {
@@ -49,10 +51,13 @@ int main(string[] args)
 	}
 
 	addrinfo hints;
+    memset(&hints, 0, addrinfo.sizeof);
+
 	addrinfo* res;
 
 	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
-	hints.ai_family = AddressFamily.INET.to!int;
+	//hints.ai_family = AddressFamily.INET.to!int;
+	hints.ai_family = AddressFamily.UNSPEC.to!int;
 	hints.ai_socktype = SocketType.STREAM; // DGRAM
 
 	string service = (args.length == 2) ? args[1] : "9000";
@@ -85,22 +90,27 @@ int main(string[] args)
 	sockaddr_storage clientaddr;
 	int addrlen = sockaddr_storage.sizeof;
 
-	UDTSOCKET recver;
+	UdtSocket recver;
 
 	import std.concurrency:spawn;
 	while (true)
 	{
-		if(UDT_INVALID_SOCK == (recver = udt_accept(serv.handle, cast(sockaddr*)&clientaddr, &addrlen))) {
-			throw new Exception(format("accept: %s", getLastError()));
-		}
+		writeln("accepted connection");
 		auto clientAddr = SocketAddress(*cast(sockaddr*)&clientaddr);
-		serv.accept(aiAddr);
-		char[NI_MAXHOST]  clienthost;
-		char[NI_MAXSERV]  clientservice;
-		getnameinfo(cast(sockaddr *)&clientaddr, clientaddr.sizeof.to!int, clienthost.ptr, clienthost.length.to!int, clientservice.ptr, clientservice.length.to!int, AddressInfoFlags.NUMERICHOST); // | AddressInfoFlags.NUMERICSERV);
+		serv.accept(recver, aiAddr);
+
+		char[NI_MAXHOST] clienthost;
+		char[NI_MAXSERV] clientservice;
+		writeln("before getnameinfo");
+		//clientAddr.getNameInfo(clienthost, clientservice);
+		getnameinfo(cast(sockaddr *)&clientaddr, clientaddr.sizeof.to!int, clienthost.ptr, clienthost.length.to!int, clientservice.ptr, clientservice.length.to!int, 
+		AddressInfoFlags.NUMERICHOST); // | AddressInfoFlags.NUMERICSERV);
+		//	AddressInfoFlags.NUMERICHOST|core.sys.posix.netdb.NI_NUMERICSERV);
+		writeln("after getnameinfo");
+
 		writefln("new connection: %s:%s" ,clienthost.ptr.fromStringz,clientservice.ptr.fromStringz);
 
-		spawn(&recvData, cast(shared)&serv);
+		spawn(&recvData, cast(shared)&recver);
 	}
 
 	serv.close();
@@ -134,7 +144,7 @@ int main(string[] args)
 
 void recvData(shared(UdtSocket)* usocket) {
 	UdtSocket recver;
-	recver.handle = usocket.handle;
+	recver = *cast()usocket;
 
 	enum Size = 100000;
 	ubyte[Size] data;
@@ -148,10 +158,10 @@ void recvData(shared(UdtSocket)* usocket) {
 			int var_size = int.sizeof;
 
 			writeln("before getsockopt");
-			udt_getsockopt(usocket.handle, 0, UDT_UDTOpt.UDT_UDT_RCVDATA, &rcv_size, &var_size);
+			udt_getsockopt(recver.handle, 0, UDT_UDTOpt.UDT_UDT_RCVDATA, &rcv_size, &var_size);
 			writeln("after getsockopt");
 			if(UDT_ERROR == 
-					(rs = udt_recv(usocket.handle, cast(char*)(data.ptr + rsize), Size - rsize, 0)))
+					(rs = udt_recv(recver.handle, cast(char*)(data.ptr + rsize), Size - rsize, 0)))
 			{
 				throw new Exception(format("recv: %s", getLastError()));
 			}

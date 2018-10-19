@@ -971,7 +971,7 @@ import std.string:toStringz,fromStringz;
 import std.conv:to;
 import std.exception:enforce;
 import std.format:format;
-import std.socket:SocketType;
+import std.socket:AddressInfoFlags,SocketType;
 
 mixin dpp.EnumD!("SocketType",__socket_type,"SOCK_");
 mixin dpp.EnumD!("Status",UDT_UDTSTATUS,"UDT_");
@@ -980,10 +980,32 @@ mixin dpp.EnumD!("ErrNo",UDT_ERRNO,"UDT_");
 mixin dpp.EnumD!("EpollOption",UDT_EPOLLOpt,"UDT_UDT_");
 
 alias AddressFamily = typeof(2);
+extern(C) int getnameinfo(
+  const sockaddr *addr, socklen_t addrlen,
+  char *host, socklen_t hostlen,
+  char *serv, socklen_t servlen, int flags);
+
+extern(C) char* gai_strerror(int errcode);
+
 struct SocketAddress
 {
  sockaddr handle;
  alias handle this;
+
+ void getNameInfo(char[] clienthost, char[] clientservice) {
+  static import core.sys.posix.netdb;
+
+  int addrlen = to!int(this.handle.sizeof);
+  int rslt = getnameinfo(cast(sockaddr*)&this.handle, addrlen,
+   clienthost.ptr, clienthost.length.to!int,
+   clientservice.ptr, clientservice.length.to!int,
+
+   AddressInfoFlags.NUMERICHOST);
+
+  enforce(rslt == 0,
+   format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz())
+  );
+ }
 }
 
 struct SocketAddressIn
@@ -1263,16 +1285,16 @@ struct UdtSocket
   return SocketOptions(UdtSocket(this.handle));
  }
 
- static auto create(AddressFamily addressFamily, SocketType socketType, int something)
+ static auto create(AddressFamily addressFamily, SocketType socketType, int protocol)
  {
-  int result = udt_socket(addressFamily.to!int, socketType.to!int,something);
+  int result = udt_socket(addressFamily.to!int, socketType.to!int, protocol);
   enforce(result != UDT_INVALID_SOCK, format!"unable to create UdtSocket: %s"(getLastError()));
   return UdtSocket(result);
  }
 
  void bind(ref SocketAddress socketAddress)
  {
-  int result = udt_bind(this.handle, &socketAddress.handle,socketAddress.handle.sizeof);
+  int result = udt_bind(this.handle, &socketAddress.handle, socketAddress.handle.sizeof);
   enforce(result != UDT_ERROR, format!"unable to bind to %s: %s"(socketAddress,getLastError()));
  }
 
@@ -1293,11 +1315,11 @@ struct UdtSocket
   enforce(udt_listen(this.handle,something) != UDT_ERROR,format!"unable to bind to listen to %s: %s"(something,getLastError()));
  }
 
- void accept(ref SocketAddress socketAddress)
+ void accept(ref UdtSocket recver, ref SocketAddress socketAddress)
  {
   int retLength;
-  int result = udt_accept(this.handle, &socketAddress.handle,&retLength);
-  enforce(result != UDT_ERROR, format!"unable to bind to %s: %s"(socketAddress,getLastError()));
+  recver.handle = udt_accept(this.handle, &socketAddress.handle, &retLength);
+  enforce(recver.handle != UDT_INVALID_SOCK, format!"unable to accept to %s: %s"(socketAddress,getLastError()));
  }
 
  auto receive(scope const ubyte[] data, int something) const
