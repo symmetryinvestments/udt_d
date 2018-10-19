@@ -1,51 +1,81 @@
 import std.stdio;
 import udtwrap;
+import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+import std.conv : to;
+import std.string : toStringz;
 
-int main(string[] args)
+struct addrinfo
 {
-	if (args.length!=5)
-	{
+  int ai_flags;                 /* Input flags.  */
+  int ai_family;                /* Protocol family for socket.  */
+  int ai_socktype;              /* Socket type.  */
+  int ai_protocol;              /* Protocol for socket.  */
+  socklen_t ai_addrlen;         /* Length of socket address.  */
+  sockaddr *ai_addr;     /* Socket address for socket.  */
+  char *ai_canonname;           /* Canonical name for service location.  */
+  addrinfo *ai_next;     /* Pointer to next in list.  */
+}
+
+extern (C) int getaddrinfo (const char *name,
+                        const char *service,
+                        const addrinfo *req,
+                        addrinfo **pai);
+extern (C) void freeaddrinfo (addrinfo *__ai);
+
+int main(string[] args) {
+	if (args.length!=5) {
 		stderr.writeln("usage: recvfile server_ip server_port remote_filename local_filename");
 		return -1;
 	}
 
-	addrinfo hints, *peer;
-	hints.ai_flags = AI_PASSIVE;
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
+	addrinfo hints; 
+	addrinfo *peer;
+	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
+	hints.ai_family = AddressFamily.INET.to!int;
+	hints.ai_socktype = SocketType.STREAM.to!int;
 
-	auto fhandle = UdtSocket(AddressFamily.INET, AddressInfoFlags.PASSIVE,SocketType.STREAM,hints.ai_protocol);
-
-	if (0 != getaddrinfo(argv[1], argv[2], &hints, &peer))
-	{
+	if (0 != getaddrinfo(args[1].toStringz(), args[2].toStringz(), &hints, &peer)) {
 		writefln("incorrect server/peer address. %s:%s",args[1],args[2]);
 		return -1;
 	}
 
+	//auto fhandle = UdtSocket.create(AddressFamily.INET, AddressInfoFlags.PASSIVE,SocketType.STREAM,hints.ai_protocol);
+	auto fhandle = UdtSocket.create(cast(AddressFamily)peer.ai_family, SocketType.STREAM, peer.ai_protocol);
+
 	// connect to the server, implict bind
-	fhandle.connect(SocketAddress(peer.ai_addr));
+	auto socketAddr = SocketAddress(*peer.ai_addr);
+	fhandle.connect(socketAddr);
 	freeaddrinfo(peer);
 
 
 	// send name information of the requested file
-	int len = args[3].length;
+	int len = to!int(args[3].length);
 
-	fhandle.send(cast(char*)&len, int.sizeof, 0);
-	fhandle.send(args[3].ptr,0);
+	fhandle.send((cast(ubyte*)&len)[0 .. int.sizeof], 0);
+
+	// TODO only works as long args[3] only consists of ASCII charaters
+	fhandle.send((cast(ubyte*)args[3].ptr)[0 .. args[3].length],0);
 
 	// get size information
-	int64_t size;
+	long size;
 
 	fhandle.recv(cast(ubyte[0..4])cast(ubyte*)&size,0);
-	enforce(size>=0,"no such file " ~args[3] ~ " on the server");{
+	int recvRslt = fhandle.recv(cast(char*)&size, to!int(long.sizeof), 0);
+	enforce(size>=0,"no such file " ~args[3] ~ " on the server");
 
 	// receive the file
-	fstream ofs(argv[4], ios::out | ios::binary | ios::trunc);
-	int64_t recvsize; 
-	int64_t offset = 0;
+	//fstream ofs(argv[4], ios::out | ios::binary | ios::trunc);
+	//int64_t recvsize; 
+	//int64_t offset = 0;
 
-	recvsize = fhandle.receiveFile(ofs, offset, size));
+	long recvsize;
+	long offset = 0;
+	//recvsize = fhandle.receiveFile(ofs, offset, size));
+	if(UDT_ERROR == (recvsize = udt_recvfile2(fhandle.handle, argv[4].ptr, offset, size))) {
+		writeln("recvfile: ", getLastError());
+		return  -1;
+	}
 	fhandle.close();
-	ofs.close();
+	//ofs.close();
 	return 0;
 }
