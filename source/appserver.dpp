@@ -2,6 +2,7 @@ import udtwrap;
 import core.thread;
 import core.time;
 import std.string;
+import std.format : format;
 import std.stdio;
 import std.conv:to;
 import std.socket:AddressInfoFlags,AddressFamily,SocketType;
@@ -82,10 +83,16 @@ int main(string[] args)
 	serv.listen(10);
 
 	sockaddr_storage clientaddr;
+	int addrlen = sockaddr_storage.sizeof;
+
+	UDTSOCKET recver;
 
 	import std.concurrency:spawn;
 	while (true)
 	{
+		if(UDT_INVALID_SOCK == (recver = udt_accept(serv.handle, cast(sockaddr*)&clientaddr, &addrlen))) {
+			throw new Exception(format("accept: %s", getLastError()));
+		}
 		auto clientAddr = SocketAddress(*cast(sockaddr*)&clientaddr);
 		serv.accept(aiAddr);
 		char[NI_MAXHOST]  clienthost;
@@ -126,7 +133,9 @@ int main(string[] args)
 }*/
 
 void recvData(shared(UdtSocket)* usocket) {
-	UdtSocket recver = UdtSocket(usocket.handle);
+	UdtSocket recver;
+	recver.handle = usocket.handle;
+
 	enum Size = 100000;
 	ubyte[Size] data;
 
@@ -144,8 +153,7 @@ void recvData(shared(UdtSocket)* usocket) {
 			if(UDT_ERROR == 
 					(rs = udt_recv(usocket.handle, cast(char*)(data.ptr + rsize), Size - rsize, 0)))
 			{
-				writefln("recv: %s", getLastError());
-				break;
+				throw new Exception(format("recv: %s", getLastError()));
 			}
 			writeln("after recv");
 
@@ -158,6 +166,6 @@ void recvData(shared(UdtSocket)* usocket) {
 	}
 
 	writeln("before close");
-	//udt_close(recver);
+	udt_close(recver);
 	writeln("after close");
 }
