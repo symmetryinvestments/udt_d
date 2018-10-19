@@ -995,20 +995,31 @@ struct SocketAddress
 }
 struct SocketAddressStorage {
  sockaddr_storage handle;
+ private enum NI_MAXHOST=200;
+ private enum NI_MAXSERV = 200;
+ private char[NI_MAXHOST] clienthost;
+ private char[NI_MAXSERV] clientservice;
 
+ @property char[] clientHost() {
+  return fromStringz(this.clienthost.ptr);
+ }
+
+ @property char[] clientService() {
+  return fromStringz(this.clientservice.ptr);
+ }
 
  void getNameInfo() {
-  enum NI_MAXHOST=200;
-  enum NI_MAXSERV = 200;
-  char[NI_MAXHOST] clienthost;
-  char[NI_MAXSERV] clientservice;
   static import core.sys.posix.netdb;
 
   int rslt = getnameinfo(cast(sockaddr*)&this.handle, this.handle.sizeof.to!int,
-   clienthost.ptr, clienthost.length.to!int,
-   clientservice.ptr, clientservice.length.to!int,
+   this.clienthost.ptr, this.clienthost.length.to!int,
+   this.clientservice.ptr, this.clientservice.length.to!int,
 
    AddressInfoFlags.NUMERICHOST);
+
+  enforce(rslt == 0,
+   format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz())
+  );
  }
 }
 
@@ -1319,18 +1330,28 @@ struct UdtSocket
   enforce(udt_listen(this.handle,something) != UDT_ERROR,format!"unable to bind to listen to %s: %s"(something,getLastError()));
  }
 
- void accept(ref UdtSocket recver, ref SocketAddress socketAddress)
+ void accept(ref UdtSocket recver, ref SocketAddressStorage socketAddress)
  {
   int retLength;
-  recver.handle = udt_accept(this.handle, &socketAddress.handle, &retLength);
+  recver.handle = udt_accept(this.handle, cast(sockaddr*)&socketAddress.handle, &retLength);
   enforce(recver.handle != UDT_INVALID_SOCK, format!"unable to accept to %s: %s"(socketAddress,getLastError()));
  }
 
- auto receive(scope const ubyte[] data, int something) const
- {
-  int result = udt_recv(this.handle,cast(char*)data.ptr,data.length.to!int,something);
-  enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
-  return result;
+ int receive(scope ubyte[] data) {
+  int rcv_size;
+  int var_size = int.sizeof;
+
+  int opt = udt_getsockopt(this.handle, 0, UDT_UDTOpt.UDT_UDT_RCVDATA, &rcv_size, &var_size);
+  if(opt == UDT_ERROR) {
+   throw new Exception(format("getsockopt: %s", getLastError()));
+  }
+
+  int rs = udt_recv(this.handle, cast(char*)(data.ptr), to!int(data.length), 0);
+  if(rs == UDT_ERROR) {
+   throw new Exception(format("recv: %s", getLastError()));
+  }
+
+  return rs;
  }
 
  auto send (scope ubyte[] data, int something)

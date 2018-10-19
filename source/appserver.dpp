@@ -78,9 +78,7 @@ int main(string[] args)
 	//UDT::setsockopt(serv, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
 
 	auto aiAddr = SocketAddress(*res.ai_addr);
-	writeln("before bind");
 	serv.bind(aiAddr);
-	writeln("after bind");
 
 	freeaddrinfo(res);
 
@@ -90,19 +88,14 @@ int main(string[] args)
 	SocketAddressStorage clientAddr;
 	UdtSocket recver;
 
-	import std.concurrency:spawn;
 	while (true)
 	{
-		writeln("accepted connection");
-		serv.accept(recver, aiAddr);
+		import std.concurrency:spawn;
+		serv.accept(recver, clientAddr);
 
-		char[NI_MAXHOST] clienthost;
-		char[NI_MAXSERV] clientservice;
-		writeln("before getnameinfo");
 		clientAddr.getNameInfo();
-		writeln("after getnameinfo");
 
-		writefln("new connection: %s:%s" ,clienthost.ptr.fromStringz,clientservice.ptr.fromStringz);
+		writefln("new connection: %s:%s" , clientAddr.clientHost, clientAddr.clientService);
 
 		spawn(&recvData, cast(shared)&recver);
 	}
@@ -110,31 +103,6 @@ int main(string[] args)
 	serv.close();
 	return 0;
 }
-
-/*void recvData(shared(UdtSocket)* usocket)
-{
-	auto recver = UdtSocket((*cast()usocket).handle);
-	ubyte[100000] data;
-	auto len = recver.receive(data[],0);
-	writeln("received message of %s",len);
-/+
-	while (true)
-	{
-		int rsize = 0;
-		int rs;
-		while (rsize < data.length)
-		{
-			//recver.options.udtReceiverBufferSize(int.sizeof.to!int);
-			auto slice = data[rsize..$];
-			rs = recver.receive(slice, 0);
-			rsize += rs;
-		}
-
-		if (rsize < data.length)
-			break;
-	} +/
-	recver.close();
-}*/
 
 void recvData(shared(UdtSocket)* usocket) {
 	UdtSocket recver;
@@ -148,17 +116,9 @@ void recvData(shared(UdtSocket)* usocket) {
 		int rs;
 
 		while(rsize < Size) {
-			int rcv_size;
-			int var_size = int.sizeof;
-
-			udt_getsockopt(recver.handle, 0, UDT_UDTOpt.UDT_UDT_RCVDATA, &rcv_size, &var_size);
-			if(UDT_ERROR == 
-					(rs = udt_recv(recver.handle, cast(char*)(data.ptr + rsize), Size - rsize, 0)))
-			{
-				throw new Exception(format("recv: %s", getLastError()));
-			}
-
-			rsize += rs;
+			int bytesReceived = recver.receive(data[rsize .. $]);
+			//writefln!"%7d %7d"(bytesReceived, rsize);
+			rsize += bytesReceived;
 		}
 
 		if(rsize < Size) {
