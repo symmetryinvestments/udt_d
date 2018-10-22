@@ -15,32 +15,8 @@ static import core.sys.posix.netdb;
 //#include <pthread.h>
 
 
-struct addrinfo
-{
-  int ai_flags;                 /* Input flags.  */
-  int ai_family;                /* Protocol family for socket.  */
-  int ai_socktype;              /* Socket type.  */
-  int ai_protocol;              /* Protocol for socket.  */
-  socklen_t ai_addrlen;         /* Length of socket address.  */
-  sockaddr *ai_addr;     /* Socket address for socket.  */
-  char *ai_canonname;           /* Canonical name for service location.  */
-  addrinfo *ai_next;     /* Pointer to next in list.  */
-}
-
-extern (C) int getaddrinfo (const char *name,
-                        const char *service,
-                        const addrinfo *req,
-                        addrinfo **pai);
-/* Free `addrinfo' structure AI including associated storage.  */
-extern (C) void freeaddrinfo (addrinfo *__ai);
-extern (C) int getnameinfo (const sockaddr *sa,
-                        socklen_t __salen, char *host,
-                        socklen_t __hostlen, char *serv,
-                        socklen_t __servlen, int __flags);
-
 enum NI_MAXHOST=200;
 enum NI_MAXSERV = 200;
-
 
 int main(string[] args)
 {

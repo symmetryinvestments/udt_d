@@ -981,6 +981,24 @@ mixin dpp.EnumD!("ErrNo",UDT_ERRNO,"UDT_");
 mixin dpp.EnumD!("EpollOption",UDT_EPOLLOpt,"UDT_UDT_");
 
 alias AddressFamily = typeof(2);
+struct addrinfo
+{
+  int ai_flags;
+  int ai_family;
+  int ai_socktype;
+  int ai_protocol;
+  socklen_t ai_addrlen;
+  sockaddr *ai_addr;
+  char *ai_canonname;
+  addrinfo *ai_next;
+}
+
+extern (C) int getaddrinfo (const char *name,
+                        const char *service,
+                        const addrinfo *req,
+                        addrinfo **pai);
+extern (C) void freeaddrinfo (addrinfo *__ai);
+
 extern (C) int getnameinfo (const sockaddr *sa,
                         socklen_t __salen, char *host,
                         socklen_t __hostlen, char *serv,

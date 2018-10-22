@@ -6,24 +6,6 @@ import std.socket:AddressInfoFlags,AddressFamily,SocketType;
 import std.string : toStringz, fromStringz;
 import std.exception : enforce;
 
-struct addrinfo
-{
-  int ai_flags;                 /* Input flags.  */
-  int ai_family;                /* Protocol family for socket.  */
-  int ai_socktype;              /* Socket type.  */
-  int ai_protocol;              /* Protocol for socket.  */
-  socklen_t ai_addrlen;         /* Length of socket address.  */
-  sockaddr *ai_addr;     /* Socket address for socket.  */
-  char *ai_canonname;           /* Canonical name for service location.  */
-  addrinfo *ai_next;     /* Pointer to next in list.  */
-}
-
-extern (C) int getaddrinfo (const char *name,
-                        const char *service,
-                        const addrinfo *req,
-                        addrinfo **pai);
-extern (C) void freeaddrinfo (addrinfo *__ai);
-
 int main(string[] args) {
 	if(args.length>2 || (args.length==2 && args[0].to!int <= 0)) {
 		writeln("usage: sendfile [server_port]");

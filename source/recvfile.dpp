@@ -5,23 +5,6 @@ import std.conv : to;
 import std.string : toStringz;
 import std.exception : enforce;
 
-struct addrinfo
-{
-  int ai_flags;                 /* Input flags.  */
-  int ai_family;                /* Protocol family for socket.  */
-  int ai_socktype;              /* Socket type.  */
-  int ai_protocol;              /* Protocol for socket.  */
-  socklen_t ai_addrlen;         /* Length of socket address.  */
-  sockaddr *ai_addr;     /* Socket address for socket.  */
-  char *ai_canonname;           /* Canonical name for service location.  */
-  addrinfo *ai_next;     /* Pointer to next in list.  */
-}
-
-extern (C) int getaddrinfo (const char *name,
-                        const char *service,
-                        const addrinfo *req,
-                        addrinfo **pai);
-extern (C) void freeaddrinfo (addrinfo *__ai);
 
 int main(string[] args) {
 	if (args.length!=5) {
@@ -40,7 +23,6 @@ int main(string[] args) {
 		return -1;
 	}
 
-	//auto fhandle = UdtSocket.create(AddressFamily.INET, AddressInfoFlags.PASSIVE,SocketType.STREAM,hints.ai_protocol);
 	auto fhandle = UdtSocket.create(cast(AddressFamily)peer.ai_family, SocketType.STREAM, peer.ai_protocol);
 
 	// connect to the server, implict bind
@@ -71,14 +53,9 @@ int main(string[] args) {
 	enforce(size>=0,"no such file " ~args[3] ~ " on the server");
 	writefln!"size to receive %d"(size);
 
-	// receive the file
-	//fstream ofs(argv[4], ios::out | ios::binary | ios::trunc);
-	//int64_t recvsize; 
-	//int64_t offset = 0;
 
 	long recvsize;
 	long offset = 0;
-	//recvsize = fhandle.receiveFile(ofs, offset, size));
 	if(UDT_ERROR == (recvsize = fhandle.receiveFile(
 			args[4], offset, size)))
 	{
@@ -86,6 +63,5 @@ int main(string[] args) {
 		return  -1;
 	}
 	fhandle.close();
-	//ofs.close();
 	return 0;
 }
