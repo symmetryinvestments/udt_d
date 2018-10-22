@@ -972,6 +972,7 @@ import std.conv:to;
 import std.exception:enforce;
 import std.format:format;
 import std.socket:AddressInfoFlags,SocketType;
+import std.traits : isArray;
 
 mixin dpp.EnumD!("SocketType",__socket_type,"SOCK_");
 mixin dpp.EnumD!("Status",UDT_UDTSTATUS,"UDT_");
@@ -1337,6 +1338,11 @@ struct UdtSocket
   enforce(recver.handle != UDT_INVALID_SOCK, format!"unable to accept to %s: %s"(socketAddress,getLastError()));
  }
 
+ int receive(T)(scope ref T data) if(!isArray!T && !is(T == ubyte[])) {
+  ubyte[] s = (cast(ubyte*)&data)[0 .. int.sizeof];
+  return this.receive(s);
+ }
+
  int receive(scope ubyte[] data) {
   int rcv_size;
   int var_size = int.sizeof;
@@ -1361,7 +1367,7 @@ struct UdtSocket
   return result;
  }
 
- auto send (scope ubyte[] data, int something)
+ auto send(scope ubyte[] data, int something)
  {
   int result = udt_send(this.handle,cast(char*)data.ptr,data.length.to!int,something);
   enforce(result != UDT_ERROR, format!"unable to send data of length %s: %s"(data.length,getLastError()));

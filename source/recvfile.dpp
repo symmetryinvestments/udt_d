@@ -52,7 +52,7 @@ int main(string[] args) {
 	int len = to!int(args[3].length);
 
 	writeln("before send name information len");
-	fhandle.send((cast(ubyte*)&len)[0 .. int.sizeof], 0);
+	fhandle.send(len);
 	writeln("after send name information len");
 
 	// TODO only works as long args[3] only consists of ASCII charaters

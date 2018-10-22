@@ -83,7 +83,7 @@ void sendfile(shared(UdtSocket)* usocket) {
 	char[1024] file;
 	int len;
 
-	fhandle.receive((cast(ubyte*)&len)[0 .. int.sizeof]);
+	fhandle.receive(len);
 	enforce(len >= 0, format!"no file could have a length of '%d'"(len));
 	enforce(len < file.length, "the length of the expected filename exceeds " ~
 		"the size of the buffer the filename is supposed to be stored in");
