@@ -19,3 +19,6 @@ recvfile: udtwrap
 
 sendfile: udtwrap
 	cd sendfile && dub build --compiler=${DC}
+
+test: recvfile sendfile
+	cd test && dub --compiler=${DC}
