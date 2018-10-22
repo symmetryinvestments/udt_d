@@ -8,6 +8,6 @@
 	"copyright": "Copyright © 2018 Symmetry Investments",
 	"license": "boost",
 	"importPaths" : ["../source/"],
-	"libs" : ["udtwrap", "udt", "stdc++"],
-    "lflags-posix": [ "-Bstatic", "-L..", "-L../udt/src" ]
+	"libs" : ["stdc++"],
+    "lflags-posix": ["../libudtwrap.a", "../udt/src/libudt.a" ]
 }

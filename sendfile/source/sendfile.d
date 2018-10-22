@@ -34,6 +34,8 @@ int main(string[] args) {
 	auto aiAddr = SocketAddress(*res.ai_addr);
 	serv.bind(aiAddr);
 
+	writefln!"sendfile listening on port %s"(service);
+
 	freeaddrinfo(res);
 
 	serv.listen(10);
@@ -82,7 +84,7 @@ void sendfile(shared(UdtSocket)* usocket) {
 	fhandle.sendFile(assumeUnique(file[0 .. len]), offset);
 
 	trace = fhandle.perfMon(trace);
-	writefln!"speed = %7.2f"(trace.mbpsSendRate);
+	writefln!"speed = %7.2f MiB/Sec"(trace.mbpsSendRate);
 
 	fhandle.close();
 }
