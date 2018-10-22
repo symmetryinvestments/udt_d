@@ -25,7 +25,6 @@ extern (C) int getaddrinfo (const char *name,
 extern (C) void freeaddrinfo (addrinfo *__ai);
 
 int main(string[] args) {
-	//usage: sendfile [server_port]
 	if(args.length>2 || (args.length==2 && args[0].to!int <= 0)) {
 		writeln("usage: sendfile [server_port]");
 		return 0;
@@ -48,34 +47,24 @@ int main(string[] args) {
 	   	return -1;
 	}
 
-	writeln("Before UdtSocket create");
 	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily,
 			to!SocketType(res.ai_socktype), res.ai_protocol);
-	writeln("After UdtSocket create");
-	writeln("Before SocketAddress bind");
 	auto aiAddr = SocketAddress(*res.ai_addr);
 	serv.bind(aiAddr);
-	writeln("After SocketAddress bind");
 
 	freeaddrinfo(res);
 
-	writeln("Before serv.listen");
 	serv.listen(10);
-	writeln("After serv.listen");
 
 	SocketAddressStorage clientAddr;
 	UdtSocket fhandle;
 
 	while (true) {
 		import std.concurrency:spawn;
-		writeln("Before serv.accept");
 		serv.accept(fhandle, clientAddr);
-		writeln("After serv.accept");
 		clientAddr.getNameInfo();
 		writefln!"new connection: %s:%s"(clientAddr.clientHost, clientAddr.clientService);
-		writeln("Before spawn");
 		spawn(&sendfile, cast(shared)&fhandle);
-		writeln("After spawn");
 	}
 
 	serv.close();
@@ -87,41 +76,35 @@ void sendfile(shared(UdtSocket)* usocket) {
 	import std.file : getSize;
 	import std.string : fromStringz;
 	import std.exception : assumeUnique;
+	import std.format : format;
 
 	UdtSocket fhandle = *cast()usocket;
 
 	char[1024] file;
 	int len;
 
-	writeln("    Before len receive");
 	fhandle.receive((cast(ubyte*)&len)[0 .. int.sizeof]);
-	writeln("    After len receive");
-	enforce(len >= 0 && len < file.length, "the length of the expected filename exceeds " ~
+	enforce(len >= 0, format!"no file could have a length of '%d'"(len));
+	enforce(len < file.length, "the length of the expected filename exceeds " ~
 		"the size of the buffer the filename is supposed to be stored in");
 
-	writeln("    Before file receive");
 	fhandle.receive(cast(ubyte[])file);
-	writeln("    After file receive");
 	file[len] = '\0';
 
 	ulong size = getSize(file[0 .. len]);
 
 	// send file size information
-	writeln("    Before size send");
 	fhandle.send(size);
-	writeln("    After size send");
 
 	TraceInfo trace;
 	trace = fhandle.perfMon(trace);
 
-	writeln("    Before file send");
 	// send the file
 	long offset = 0;
 	fhandle.sendFile(assumeUnique(file[0 .. len]), offset);
-	writeln("    After file send");
 
 	trace = fhandle.perfMon(trace);
-	writefln("speed = %s Mbits/sec",trace.mbpsSendRate);
+	writefln!"speed = %7.2f"(trace.mbpsSendRate);
 
 	fhandle.close();
 }
