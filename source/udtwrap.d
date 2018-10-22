@@ -1354,6 +1354,13 @@ struct UdtSocket
   return rs;
  }
 
+ int send(T)(scope ref T data) @system {
+
+  int result = this.send((cast(ubyte*)&data)[0 .. T.sizeof], 0);
+  enforce(result != UDT_ERROR, format!"unable to send data of length %s:%s"(T.sizeof, getLastError()));
+  return result;
+ }
+
  auto send (scope ubyte[] data, int something)
  {
   int result = udt_send(this.handle,cast(char*)data.ptr,data.length.to!int,something);
@@ -1384,10 +1391,16 @@ struct UdtSocket
   return result;
  }
 
- auto sendFile(scope ubyte[] data, ref long offset, int block)
+ auto sendFile(string filename, ref long offset, int block = 364000)
  {
-  long result = udt_sendfile2(this.handle,cast(char*)data.ptr,&offset,data.length.to!long,block);
-  enforce(result != UDT_ERROR, format!"unable to send file of length %s: %s"(data.length,getLastError()));
+  import std.file : getSize;
+  import std.conv : to;
+
+  const length = to!long(getSize(filename));
+  long result = udt_sendfile2(this.handle, filename.toStringz(),
+    &offset, length, block
+   );
+  enforce(result != UDT_ERROR, format!"unable to send file of length %s: %s"(length, getLastError()));
   return result;
  }
 

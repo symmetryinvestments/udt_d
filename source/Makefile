@@ -1,4 +1,4 @@
-all: appclient appserver recvfile
+all: appclient appserver recvfile sendfile
 
 udtwrap.o: udtwrap.dpp
 	d++ -c --keep-d-files udtwrap.dpp
@@ -14,3 +14,7 @@ appserver: appserver.dpp udtwrap.o
 recvfile: recvfile.dpp udtwrap.o
 	d++ -c recvfile.dpp --keep-d-files
 	g++ -o recvfile recvfile.o udtwrap.o libudtc.a libudt.a -L-lstdc++ -lpthread -lphobos2 -L-L~/dlang/dmd-2.080.0/linux/lib64
+
+sendfile: sendfile.dpp udtwrap.o
+	d++ -c sendfile.dpp --keep-d-files
+	g++ -o sendfile sendfile.o udtwrap.o libudtc.a libudt.a -L-lstdc++ -lpthread -lphobos2 -L-L~/dlang/dmd-2.080.0/linux/lib64

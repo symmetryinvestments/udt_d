@@ -1,96 +1,127 @@
 import udtwrap;
 
+import std.conv : to;
+import std.stdio : writeln, writefln;
+import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+import std.string : toStringz, fromStringz;
+import std.exception : enforce;
 
-int main(string[] args)
+struct addrinfo
 {
-   //usage: sendfile [server_port]
-   if (args.length>2 || (args.length==2 &&args[0].to!int<=0))
-   {
-      stderr.writeln( "usage: sendfile [server_port]");
-      return 0;
-   }
-
-   addrinfo hints;
-   addrinfo* res;
-
-   hints.ai_flags = AI_PASSIVE;
-   hints.ai_family = AF_INET;
-   hints.ai_socktype = SOCK_STREAM;
-
-   auto service = (args
-   string service="9000";
-   if (2 == argc)
-      service = argv[1];
-
-   if (0 != getaddrinfo(NULL, service.c_str(), &hints, &res))
-   {
-      cout << "illegal port number or port is busy.\n" << endl;
-      return 0;
-   }
-
-   UDTSOCKET serv = UDT::socket(res.ai_family, res.ai_socktype, res.ai_protocol);
-   serv.bind(res.ai_addr, res.ai_addrlen);
-   freeaddrinfo(res);
-   writefln("server is ready at port: %s",service);
-   serv.listen(10);
-
-   sockaddr_storage clientaddr;
-   int addrlen = clientaddr.sizeof;
-
-   UDTSOCKET fhandle;
-
-   while (true)
-   {
-      fhandle = serv.accept(cast(scokaddr*)&clientaddr);
-
-      char clienthost[NI_MAXHOST];
-      char clientservice[NI_MAXSERV];
-      getnameinfo((sockaddr *)&clientaddr, addrlen, clienthost, sizeof(clienthost), clientservice, sizeof(clientservice), NI_NUMERICHOST|NI_NUMERICSERV);
-      writefln("new connection: %s:%s" ,clienthost,clientservice);
-
-	 pthread_t filethread;
-	 pthread_create(&filethread, null, sendfile, new UDTSOCKET(fhandle));
-	 pthread_detach(filethread);
-   }
-
-   serv.close();
-
-   return 0;
+  int ai_flags;                 /* Input flags.  */
+  int ai_family;                /* Protocol family for socket.  */
+  int ai_socktype;              /* Socket type.  */
+  int ai_protocol;              /* Protocol for socket.  */
+  socklen_t ai_addrlen;         /* Length of socket address.  */
+  sockaddr *ai_addr;     /* Socket address for socket.  */
+  char *ai_canonname;           /* Canonical name for service location.  */
+  addrinfo *ai_next;     /* Pointer to next in list.  */
 }
 
-void* sendfile(void* usocket)
-{
-   UDTSOCKET fhandle = *cast(UDTSOCKET*)usocket;
-   delete (UDTSOCKET*)usocket;
+extern (C) int getaddrinfo (const char *name,
+                        const char *service,
+                        const addrinfo *req,
+                        addrinfo **pai);
+extern (C) void freeaddrinfo (addrinfo *__ai);
 
-   char[1024] file;
-   int len;
+int main(string[] args) {
+	//usage: sendfile [server_port]
+	if(args.length>2 || (args.length==2 && args[0].to!int <= 0)) {
+		writeln("usage: sendfile [server_port]");
+		return 0;
+	}
+	
+	addrinfo hints;
+	addrinfo* res;
 
-   fhandle.receive(cast(ubyte[0..4])len,0);
-   fhandle.receive(file,len,0);
-   file[len] = '\0';
+	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
+	hints.ai_family = AddressFamily.INET.to!int;
+	hints.ai_socktype = SocketType.STREAM.to!int;
 
-   // open the file
-   fstream ifs(file, ios::in | ios::binary);
+	string service="9000";
+	if(args.length == 2) {
+	   	service = args[1];
+	}
 
-   ifs.seekg(0, ios::end);
-   int64_t size = ifs.tellg();
-   ifs.seekg(0, ios::beg);
+	if(0 != getaddrinfo(null, service.toStringz(), &hints, &res)) {
+	   	writeln("illegal port number or port is busy.");
+	   	return -1;
+	}
 
-   // send file size information
-   fhandle.send(size,0);
+	writeln("Before UdtSocket create");
+	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily,
+			to!SocketType(res.ai_socktype), res.ai_protocol);
+	writeln("After UdtSocket create");
+	writeln("Before SocketAddress bind");
+	auto aiAddr = SocketAddress(*res.ai_addr);
+	serv.bind(aiAddr);
+	writeln("After SocketAddress bind");
 
-   TraceInfo trace;
-   trace = fhandle.perfMon(trace);
+	freeaddrinfo(res);
 
-   // send the file
-   int64_t offset = 0;
-   fhandle.sendfile(ifs,offset,size);
+	writeln("Before serv.listen");
+	serv.listen(10);
+	writeln("After serv.listen");
 
-   trace = fhandle.perfMon(trace);
-   writefln("speed = %s Mbits/sec",trace.mbpsSendRate);
+	SocketAddressStorage clientAddr;
+	UdtSocket fhandle;
 
-   fhandle.close();
-   ifs.close();
-   return null;
+	while (true) {
+		import std.concurrency:spawn;
+		writeln("Before serv.accept");
+		serv.accept(fhandle, clientAddr);
+		writeln("After serv.accept");
+		clientAddr.getNameInfo();
+		writefln!"new connection: %s:%s"(clientAddr.clientHost, clientAddr.clientService);
+		writeln("Before spawn");
+		spawn(&sendfile, cast(shared)&fhandle);
+		writeln("After spawn");
+	}
+
+	serv.close();
+
+	return 0;
+}
+
+void sendfile(shared(UdtSocket)* usocket) {
+	import std.file : getSize;
+	import std.string : fromStringz;
+	import std.exception : assumeUnique;
+
+	UdtSocket fhandle = *cast()usocket;
+
+	char[1024] file;
+	int len;
+
+	writeln("    Before len receive");
+	fhandle.receive((cast(ubyte*)&len)[0 .. int.sizeof]);
+	writeln("    After len receive");
+	enforce(len >= 0 && len < file.length, "the length of the expected filename exceeds " ~
+		"the size of the buffer the filename is supposed to be stored in");
+
+	writeln("    Before file receive");
+	fhandle.receive(cast(ubyte[])file);
+	writeln("    After file receive");
+	file[len] = '\0';
+
+	ulong size = getSize(file[0 .. len]);
+
+	// send file size information
+	writeln("    Before size send");
+	fhandle.send(size);
+	writeln("    After size send");
+
+	TraceInfo trace;
+	trace = fhandle.perfMon(trace);
+
+	writeln("    Before file send");
+	// send the file
+	long offset = 0;
+	fhandle.sendFile(assumeUnique(file[0 .. len]), offset);
+	writeln("    After file send");
+
+	trace = fhandle.perfMon(trace);
+	writefln("speed = %s Mbits/sec",trace.mbpsSendRate);
+
+	fhandle.close();
 }
