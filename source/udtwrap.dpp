@@ -443,11 +443,12 @@ struct UdtSocket
 		return result;
 	}
 
-	auto receiveFile(out ubyte[] data, ref long offset, int block)
+	auto receiveFile(string filename, ref long offset, ulong size, int block = 7280000)
 	{
-		long result = udt_recvfile2(this.handle,cast(char*)data.ptr,&offset, data.length.to!long,block);
-		enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
-		data.length = result;
+		long result = udt_recvfile2(this.handle, filename.toStringz(), &offset, size, block);
+		enforce(result != UDT_ERROR, 
+			format!"unable to receive data to buffer of length %s: %s"(size, getLastError())
+		);
 		return result;
 	}
 

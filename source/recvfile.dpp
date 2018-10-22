@@ -3,6 +3,7 @@ import udtwrap;
 import std.socket:AddressInfoFlags,AddressFamily,SocketType;
 import std.conv : to;
 import std.string : toStringz;
+import std.exception : enforce;
 
 struct addrinfo
 {
@@ -47,21 +48,28 @@ int main(string[] args) {
 	fhandle.connect(socketAddr);
 	freeaddrinfo(peer);
 
-
 	// send name information of the requested file
 	int len = to!int(args[3].length);
 
+	writeln("before send name information len");
 	fhandle.send((cast(ubyte*)&len)[0 .. int.sizeof], 0);
+	writeln("after send name information len");
 
 	// TODO only works as long args[3] only consists of ASCII charaters
-	fhandle.send((cast(ubyte*)args[3].ptr)[0 .. args[3].length],0);
+	writeln("before send name information");
+	fhandle.send((cast(ubyte*)args[3].ptr)[0 .. args[3].length], 0);
+	writeln("after send name information");
 
 	// get size information
 	long size;
+	ubyte[] sizePtr = (cast(ubyte*)&size)[0 .. long.sizeof];
+	assert(cast(void*)&size is cast(void*)sizePtr.ptr);
 
-	fhandle.recv(cast(ubyte[0..4])cast(ubyte*)&size,0);
-	int recvRslt = fhandle.recv(cast(char*)&size, to!int(long.sizeof), 0);
+	writeln("before receive size");
+	long recvRslt = fhandle.receive(sizePtr);
+	writeln("after receive size");
 	enforce(size>=0,"no such file " ~args[3] ~ " on the server");
+	writefln!"size to receive %d"(size);
 
 	// receive the file
 	//fstream ofs(argv[4], ios::out | ios::binary | ios::trunc);
@@ -71,7 +79,9 @@ int main(string[] args) {
 	long recvsize;
 	long offset = 0;
 	//recvsize = fhandle.receiveFile(ofs, offset, size));
-	if(UDT_ERROR == (recvsize = udt_recvfile2(fhandle.handle, argv[4].ptr, offset, size))) {
+	if(UDT_ERROR == (recvsize = fhandle.receiveFile(
+			args[4], offset, size)))
+	{
 		writeln("recvfile: ", getLastError());
 		return  -1;
 	}
