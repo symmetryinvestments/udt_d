@@ -1,0 +1,3 @@
+[submodule "udt"]
+	path = udt
+	url = git@github.com:zerovm/udt.git
