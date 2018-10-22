@@ -1,0 +1,13 @@
+{
+	"name": "appclient",
+	"targetType" : "executable",
+	"authors": [
+		"Robert Schadek"
+	],
+	"description": "appclient",
+	"copyright": "Copyright © 2018 Symmetry Investments",
+	"license": "boost",
+	"importPaths" : ["../source/"],
+	"libs" : ["udtwrap", "udt", "stdc++"],
+    "lflags-posix": [ "-Bstatic", "-L..", "-L../udt/src" ]
+}

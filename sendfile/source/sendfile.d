@@ -48,10 +48,6 @@ int main(string[] args) {
 		writefln!"new connection: %s:%s"(clientAddr.clientHost, clientAddr.clientService);
 		spawn(&sendfile, cast(shared)&fhandle);
 	}
-
-	serv.close();
-
-	return 0;
 }
 
 void sendfile(shared(UdtSocket)* usocket) {

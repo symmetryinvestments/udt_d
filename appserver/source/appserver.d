@@ -31,8 +31,7 @@ int main(string[] args)
 
 	string service = (args.length == 2) ? args[1] : "9000";
 
-	if (0 != getaddrinfo(null, service.toStringz, &hints, &res))
-	{
+	if (0 != getaddrinfo(null, service.toStringz, &hints, &res)) {
 		writefln("illegal port number or port is busy.");
 		return 0;
 	}
@@ -57,8 +56,7 @@ int main(string[] args)
 	SocketAddressStorage clientAddr;
 	UdtSocket recver;
 
-	while (true)
-	{
+	while (true) {
 		import std.concurrency:spawn;
 		serv.accept(recver, clientAddr);
 
@@ -69,8 +67,8 @@ int main(string[] args)
 		spawn(&recvData, cast(shared)&recver);
 	}
 
-	serv.close();
-	return 0;
+//	serv.close();
+//	return 0;
 }
 
 void recvData(shared(UdtSocket)* usocket) {
