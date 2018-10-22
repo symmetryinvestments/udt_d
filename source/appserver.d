@@ -8,13 +8,6 @@ import std.conv:to;
 import std.socket:AddressInfoFlags,AddressFamily,SocketType;
 static import core.sys.posix.netdb;
 
-//#include <arpa/inet.h>
-//#include <sys/types.h>
-//#include <sys/socket.h>
-//#include <netdb.h>
-//#include <pthread.h>
-
-
 enum NI_MAXHOST=200;
 enum NI_MAXSERV = 200;
 
