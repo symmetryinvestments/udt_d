@@ -15,6 +15,6 @@ recvfile: recvfile.d udtwrap.o
 	dmd -c recvfile.d
 	g++ -o recvfile recvfile.o udtwrap.o libudtc.a libudt.a -L-lstdc++ -lpthread -lphobos2 -L-L~/dlang/dmd-2.080.0/linux/lib64
 
-sendfile: sendfile.dpp udtwrap.o
-	d++ -c sendfile.dpp --keep-d-files
+sendfile: sendfile.d udtwrap.o
+	dmd -c sendfile.d
 	g++ -o sendfile sendfile.o udtwrap.o libudtc.a libudt.a -L-lstdc++ -lpthread -lphobos2 -L-L~/dlang/dmd-2.080.0/linux/lib64
