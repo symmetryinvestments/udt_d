@@ -1,0 +1,13 @@
+{
+	"name": "sendfile",
+	"targetType" : "executable",
+	"authors": [
+		"Robert Schadek"
+	],
+	"description": "sendfile",
+	"copyright": "Copyright © 2018 Symmetry Investments",
+	"license": "boost",
+	"importPaths" : ["../source/"],
+	"libs" : ["stdc++"],
+    "lflags-posix": ["../libudtwrap.a", "../udt/src/libudt.a" ]
+}

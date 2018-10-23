@@ -1,0 +1,14 @@
+.dub
+docs.json
+__dummy.html
+docs/
+appclient.so
+appclient.dylib
+appclient.dll
+appclient.a
+appclient.lib
+appclient-test-*
+*.exe
+*.o
+*.obj
+*.lst
