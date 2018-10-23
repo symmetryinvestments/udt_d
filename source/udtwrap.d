@@ -972,6 +972,7 @@ import std.conv:to;
 import std.exception:enforce;
 import std.format:format;
 import std.socket:AddressInfoFlags,SocketType;
+import std.traits : isArray;
 
 mixin dpp.EnumD!("SocketType",__socket_type,"SOCK_");
 mixin dpp.EnumD!("Status",UDT_UDTSTATUS,"UDT_");
@@ -980,6 +981,24 @@ mixin dpp.EnumD!("ErrNo",UDT_ERRNO,"UDT_");
 mixin dpp.EnumD!("EpollOption",UDT_EPOLLOpt,"UDT_UDT_");
 
 alias AddressFamily = typeof(2);
+struct addrinfo
+{
+  int ai_flags;
+  int ai_family;
+  int ai_socktype;
+  int ai_protocol;
+  socklen_t ai_addrlen;
+  sockaddr *ai_addr;
+  char *ai_canonname;
+  addrinfo *ai_next;
+}
+
+extern (C) int getaddrinfo (const char *name,
+                        const char *service,
+                        const addrinfo *req,
+                        addrinfo **pai);
+extern (C) void freeaddrinfo (addrinfo *__ai);
+
 extern (C) int getnameinfo (const sockaddr *sa,
                         socklen_t __salen, char *host,
                         socklen_t __hostlen, char *serv,
@@ -1337,6 +1356,11 @@ struct UdtSocket
   enforce(recver.handle != UDT_INVALID_SOCK, format!"unable to accept to %s: %s"(socketAddress,getLastError()));
  }
 
+ int receive(T)(scope ref T data) if(!isArray!T && !is(T == ubyte[])) {
+  ubyte[] s = (cast(ubyte*)&data)[0 .. int.sizeof];
+  return this.receive(s);
+ }
+
  int receive(scope ubyte[] data) {
   int rcv_size;
   int var_size = int.sizeof;
@@ -1354,7 +1378,14 @@ struct UdtSocket
   return rs;
  }
 
- auto send (scope ubyte[] data, int something)
+ int send(T)(scope ref T data) @system {
+
+  int result = this.send((cast(ubyte*)&data)[0 .. T.sizeof], 0);
+  enforce(result != UDT_ERROR, format!"unable to send data of length %s:%s"(T.sizeof, getLastError()));
+  return result;
+ }
+
+ auto send(scope ubyte[] data, int something)
  {
   int result = udt_send(this.handle,cast(char*)data.ptr,data.length.to!int,something);
   enforce(result != UDT_ERROR, format!"unable to send data of length %s: %s"(data.length,getLastError()));
@@ -1375,18 +1406,25 @@ struct UdtSocket
   return result;
  }
 
- auto receiveFile(out ubyte[] data, ref long offset, int block)
+ auto receiveFile(string filename, ref long offset, ulong size, int block = 7280000)
  {
-  long result = udt_recvfile2(this.handle,cast(char*)data.ptr,&offset, data.length.to!long,block);
-  enforce(result != UDT_ERROR, format!"unable to receive data to buffer of length %s: %s"(data.length,getLastError()));
-  data.length = result;
+  long result = udt_recvfile2(this.handle, filename.toStringz(), &offset, size, block);
+  enforce(result != UDT_ERROR,
+   format!"unable to receive data to buffer of length %s: %s"(size, getLastError())
+  );
   return result;
  }
 
- auto sendFile(scope ubyte[] data, ref long offset, int block)
+ auto sendFile(string filename, ref long offset, int block = 364000)
  {
-  long result = udt_sendfile2(this.handle,cast(char*)data.ptr,&offset,data.length.to!long,block);
-  enforce(result != UDT_ERROR, format!"unable to send file of length %s: %s"(data.length,getLastError()));
+  import std.file : getSize;
+  import std.conv : to;
+
+  const length = to!long(getSize(filename));
+  long result = udt_sendfile2(this.handle, filename.toStringz(),
+    &offset, length, block
+   );
+  enforce(result != UDT_ERROR, format!"unable to send file of length %s: %s"(length, getLastError()));
   return result;
  }
 

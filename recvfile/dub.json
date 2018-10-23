@@ -1,0 +1,13 @@
+{
+	"name": "recvfile",
+	"targetType" : "executable",
+	"authors": [
+		"Robert Schadek"
+	],
+	"description": "recvfile",
+	"copyright": "Copyright © 2018 Symmetry Investments",
+	"license": "boost",
+	"importPaths" : ["../source/"],
+	"libs" : ["stdc++"],
+    "lflags-posix": ["../libudtwrap.a", "../udt/src/libudt.a" ]
+}

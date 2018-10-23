@@ -5,34 +5,9 @@ import std.string;
 import std.stdio;
 import std.conv:to;
 import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+import std.concurrency : spawn;
 
-//#include <arpa/inet.h>
-#include <sys/types.h>
-//#include <sys/socket.h>
-//#include <netdb.h>
-#include <pthread.h>
-
-struct addrinfo
-{
-  int ai_flags;                 /* Input flags.  */
-  int ai_family;                /* Protocol family for socket.  */
-  int ai_socktype;              /* Socket type.  */
-  int ai_protocol;              /* Protocol for socket.  */
-  socklen_t ai_addrlen;         /* Length of socket address.  */
-  sockaddr *ai_addr;     /* Socket address for socket.  */
-  char *ai_canonname;           /* Canonical name for service location.  */
-  addrinfo *ai_next;     /* Pointer to next in list.  */
-}
-
-extern (C) int getaddrinfo (const char *name,
-                        const char *service,
-                        const addrinfo *req,
-                        addrinfo **pai);
-/* Free `addrinfo' structure AI including associated storage.  */
-extern (C) void freeaddrinfo (addrinfo *__ai);
-
-int main(string[] args)
-{
+int main(string[] args) {
 	if (args.length !=3 || !args[2].isNumeric)
 	{
 		stderr.writefln("usage: appclient server_ip server_port");
@@ -83,17 +58,11 @@ int main(string[] args)
 	client.connect(peerAddress);
 	freeaddrinfo(peer);
 
-	// using CC method
-	//CUDPBlast* cchandle = null;
-	//int temp;
-	//UDT::getsockopt(client, 0, UDT_CC, &cchandle, &temp);
-	//if (null != cchandle)
-	//   cchandle.setRate(500);
-
 	ubyte[] data;
 	data.length = 100000;
 
-	pthread_create(new pthread_t, null, &monitor, cast(void*)&client);
+	//pthread_create(new pthread_t, null, &monitor, cast(void*)&client);
+	spawn(&monitor, cast(shared)&client);
 
 	foreach(i;0.. 1000000)
 	{
@@ -117,8 +86,7 @@ int main(string[] args)
 	return 0;
 }
 
-extern(C) void* monitor(void* s)
-{
+void monitor(shared(UdtSocket)* s) {
 	auto u = * cast(UdtSocket*) s;
 
 	TraceInfo perf;
@@ -132,12 +100,10 @@ extern(C) void* monitor(void* s)
 			].join("\t")
 	);
 
-	while (true)
-	{
+	while (true) {
 		Thread.sleep(1.seconds);
 		perf = u.perfMon(perf);
 		writefln("%s\t\t%s\t%s\t%s\t\t\t%s\t%s", perf.mbpsSendRate, perf.msRTT, perf.pktCongestionWindow, perf.usPktSndPeriod, perf.pktRecvACK, perf.pktRecvNAK);
 	}
 
-	return null;
 }

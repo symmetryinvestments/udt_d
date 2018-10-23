@@ -1,0 +1,9 @@
+{
+	"name": "test",
+	"authors": [
+		"Robert Schadek"
+	],
+	"description": "Test for send and recvfile",
+	"copyright": "Copyright © 2018 Symmetry Investments",
+	"license": "boost"
+}

@@ -8,39 +8,8 @@ import std.conv:to;
 import std.socket:AddressInfoFlags,AddressFamily,SocketType;
 static import core.sys.posix.netdb;
 
-//#include <arpa/inet.h>
-//#include <sys/types.h>
-//#include <sys/socket.h>
-//#include <netdb.h>
-//#include <pthread.h>
-
-
-struct addrinfo
-{
-  int ai_flags;                 /* Input flags.  */
-  int ai_family;                /* Protocol family for socket.  */
-  int ai_socktype;              /* Socket type.  */
-  int ai_protocol;              /* Protocol for socket.  */
-  socklen_t ai_addrlen;         /* Length of socket address.  */
-  sockaddr *ai_addr;     /* Socket address for socket.  */
-  char *ai_canonname;           /* Canonical name for service location.  */
-  addrinfo *ai_next;     /* Pointer to next in list.  */
-}
-
-extern (C) int getaddrinfo (const char *name,
-                        const char *service,
-                        const addrinfo *req,
-                        addrinfo **pai);
-/* Free `addrinfo' structure AI including associated storage.  */
-extern (C) void freeaddrinfo (addrinfo *__ai);
-extern (C) int getnameinfo (const sockaddr *sa,
-                        socklen_t __salen, char *host,
-                        socklen_t __hostlen, char *serv,
-                        socklen_t __servlen, int __flags);
-
 enum NI_MAXHOST=200;
 enum NI_MAXSERV = 200;
-
 
 int main(string[] args)
 {
@@ -62,8 +31,7 @@ int main(string[] args)
 
 	string service = (args.length == 2) ? args[1] : "9000";
 
-	if (0 != getaddrinfo(null, service.toStringz, &hints, &res))
-	{
+	if (0 != getaddrinfo(null, service.toStringz, &hints, &res)) {
 		writefln("illegal port number or port is busy.");
 		return 0;
 	}
@@ -88,8 +56,7 @@ int main(string[] args)
 	SocketAddressStorage clientAddr;
 	UdtSocket recver;
 
-	while (true)
-	{
+	while (true) {
 		import std.concurrency:spawn;
 		serv.accept(recver, clientAddr);
 
@@ -100,8 +67,8 @@ int main(string[] args)
 		spawn(&recvData, cast(shared)&recver);
 	}
 
-	serv.close();
-	return 0;
+//	serv.close();
+//	return 0;
 }
 
 void recvData(shared(UdtSocket)* usocket) {
