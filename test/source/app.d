@@ -2,11 +2,17 @@ import std.stdio;
 import std.process;
 import std.exception : enforce;
 import std.file : remove;
+import std.format : format;
+import std.random : uniform, Random;
 
 void main() {
+	auto rnd = Random(1337);
+
 	foreach(i; 0 .. 10) {
 		auto randomfile = spawnProcess(["dd", "if=/dev/urandom", "of=orig",
-				"count=10240", "bs=10240"]);
+				format!"count=%d"(uniform(5000, 20000, rnd)),
+				format!"bs=%d"(uniform(5000, 20000, rnd))
+			]);
 		randomfile.wait();
 	
 		auto sendfile = spawnProcess(["../sendfile/sendfile"]);
