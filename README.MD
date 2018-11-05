@@ -1,12 +1,13 @@
 
-Dlang wrapper for UDT - reliable UDP data transfer library
+Command-line tools and D wrapper for UDT - reliable UDP data transfer library
+
 http://udt.sourceforge.net/doc.html
 
 Based on udtc wrapper here
 https://github.com/zerovm/udt
 
 Status:
-* Dpp successfully translates UDT C headers
-* Wrapper builds but is not yet tested.  Some pieces commented out and probably some dumb mistakes
-* Test programs are in app directory and have not yet been fully translated (do not yet build)
-
+* UDT-C headers are translated using DPP to produce D bindings
+* D wrapper for UDT
+* Command-line tools for file and pipe transfer
+* Awaiting further testing and finishing before releasing.
