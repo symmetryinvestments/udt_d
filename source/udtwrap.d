@@ -1357,7 +1357,7 @@ struct UdtSocket
  }
 
  int receive(T)(scope ref T data) if(!isArray!T && !is(T == ubyte[])) {
-  ubyte[] s = (cast(ubyte*)&data)[0 .. int.sizeof];
+  ubyte[] s = (cast(ubyte*)&data)[0 .. T.sizeof];
   return this.receive(s);
  }
 
