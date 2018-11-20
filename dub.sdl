@@ -5,4 +5,7 @@ copyright "Copyright © 2018, Laeeth Isharc and Kaleidic Associates"
 license "boost"
 targetType "library"
 targetName "udtwrap"
-preBuildCommands "d++ -c --keep-d-files source/udtwrap.dpp"
+# There used to be a command here to run d++ but only works with a custom-build one.
+# For unknown reasons `dub run dpp` doesn't seem to work unless ran manually on the
+# command line. Since the .d file is checked in anyway, we leave it to the maintainer
+# update it as needed.
