@@ -17,3 +17,5 @@ popd
 
 export PATH=$PATH:$SCRIPT_DIR/dpp/bin
 echo "PATH: $PATH"
+
+ls $SCRIPT_DIR
