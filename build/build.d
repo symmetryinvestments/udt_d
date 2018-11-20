@@ -98,9 +98,15 @@ string[] dubRunArgs() {
 }
 
 string[] dubArgs(in string command) {
-    return ["dub", command, "-q", "--compiler=" ~ compiler, "--arch=x86_mscoff"];
+    return ["dub", command, "-q", "--compiler=" ~ compiler, "--arch=" ~ arch];
 }
 
+string arch() pure {
+    version(Windows)
+        return "x86_mscoff";
+    else
+        return "x86_64";
+}
 
 string compiler() {
     import std.process: environment;
