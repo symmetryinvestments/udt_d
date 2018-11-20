@@ -10,13 +10,8 @@
 
         struct __locale_data { int dummy; }
 
-
 alias _Bool = bool;
 struct dpp {
-
-    static bool isEmpty(T)() {
-        return T.tupleof.length == 0;
-    }
     static struct Move(T) {
         T* ptr;
     }
@@ -46,7 +41,6 @@ struct dpp {
 
 extern(C)
 {
-    alias size_t = c_ulong;
     alias fsfilcnt_t = c_ulong;
     alias fsblkcnt_t = c_ulong;
     alias blkcnt_t = c_long;
@@ -77,23 +71,26 @@ extern(C)
     alias u_int = uint;
     alias u_short = ushort;
     alias u_char = ubyte;
+    __dev_t gnu_dev_makedev(uint, uint) @nogc nothrow;
+    uint gnu_dev_minor(__dev_t) @nogc nothrow;
+    uint gnu_dev_major(__dev_t) @nogc nothrow;
     int isfdtype(int, int) @nogc nothrow;
     int sockatmark(int) @nogc nothrow;
     int shutdown(int, int) @nogc nothrow;
-    int accept(int, sockaddr*, uint*) @nogc nothrow;
+    int accept(int, sockaddr*, socklen_t*) @nogc nothrow;
     int listen(int, int) @nogc nothrow;
-    int setsockopt(int, int, int, const(void)*, uint) @nogc nothrow;
-    int getsockopt(int, int, int, void*, uint*) @nogc nothrow;
-    c_long recvmsg(int, msghdr*, int) @nogc nothrow;
-    c_long sendmsg(int, const(msghdr)*, int) @nogc nothrow;
-    c_long recvfrom(int, void*, c_ulong, int, sockaddr*, uint*) @nogc nothrow;
-    c_long sendto(int, const(void)*, c_ulong, int, const(sockaddr)*, uint) @nogc nothrow;
-    c_long recv(int, void*, c_ulong, int) @nogc nothrow;
-    c_long send(int, const(void)*, c_ulong, int) @nogc nothrow;
-    int getpeername(int, sockaddr*, uint*) @nogc nothrow;
-    int connect(int, const(sockaddr)*, uint) @nogc nothrow;
-    int getsockname(int, sockaddr*, uint*) @nogc nothrow;
-    int bind(int, const(sockaddr)*, uint) @nogc nothrow;
+    int setsockopt(int, int, int, const(void)*, socklen_t) @nogc nothrow;
+    int getsockopt(int, int, int, void*, socklen_t*) @nogc nothrow;
+    ssize_t recvmsg(int, msghdr*, int) @nogc nothrow;
+    ssize_t sendmsg(int, const(msghdr)*, int) @nogc nothrow;
+    ssize_t recvfrom(int, void*, size_t, int, sockaddr*, socklen_t*) @nogc nothrow;
+    ssize_t sendto(int, const(void)*, size_t, int, const(sockaddr)*, socklen_t) @nogc nothrow;
+    ssize_t recv(int, void*, size_t, int) @nogc nothrow;
+    ssize_t send(int, const(void)*, size_t, int) @nogc nothrow;
+    int getpeername(int, sockaddr*, socklen_t*) @nogc nothrow;
+    int connect(int, const(sockaddr)*, socklen_t) @nogc nothrow;
+    int getsockname(int, sockaddr*, socklen_t*) @nogc nothrow;
+    int bind(int, const(sockaddr)*, socklen_t) @nogc nothrow;
     int socketpair(int, int, int, int*) @nogc nothrow;
     int socket(int, int, int) @nogc nothrow;
     enum _Anonymous_0
@@ -110,40 +107,88 @@ extern(C)
     alias fd_mask = c_long;
     struct fd_set
     {
-        c_long[16] __fds_bits;
+        __fd_mask[16] __fds_bits;
     }
     alias __fd_mask = c_long;
     alias suseconds_t = c_long;
-    int strncasecmp_l(const(char)*, const(char)*, c_ulong, __locale_struct*) @nogc nothrow;
-    int strcasecmp_l(const(char)*, const(char)*, __locale_struct*) @nogc nothrow;
-    int strncasecmp(const(char)*, const(char)*, c_ulong) @nogc nothrow;
-    int strcasecmp(const(char)*, const(char)*) @nogc nothrow;
-    int ffsll(long) @nogc nothrow;
-    int ffsl(c_long) @nogc nothrow;
-    int ffs(int) @nogc nothrow;
-    char* rindex(const(char)*, int) @nogc nothrow;
-    char* index(const(char)*, int) @nogc nothrow;
-    void bzero(void*, c_ulong) @nogc nothrow;
-    void bcopy(const(void)*, void*, c_ulong) @nogc nothrow;
-    int bcmp(const(void)*, const(void)*, c_ulong) @nogc nothrow;
-    char* stpncpy(char*, const(char)*, c_ulong) @nogc nothrow;
-    char* __stpncpy(char*, const(char)*, c_ulong) @nogc nothrow;
-    char* stpcpy(char*, const(char)*) @nogc nothrow;
-    char* __stpcpy(char*, const(char)*) @nogc nothrow;
-    char* strsignal(int) @nogc nothrow;
-    char* strsep(char**, const(char)*) @nogc nothrow;
-    void explicit_bzero(void*, c_ulong) @nogc nothrow;
-    char* strerror_l(int, __locale_struct*) @nogc nothrow;
-    int strerror_r(int, char*, c_ulong) @nogc nothrow;
-    char* strerror(int) @nogc nothrow;
-    c_ulong strnlen(const(char)*, c_ulong) @nogc nothrow;
-    c_ulong strlen(const(char)*) @nogc nothrow;
-    char* strtok_r(char*, const(char)*, char**) @nogc nothrow;
-    char* __strtok_r(char*, const(char)*, char**) @nogc nothrow;
-    char* strtok(char*, const(char)*) @nogc nothrow;
-    char* strstr(const(char)*, const(char)*) @nogc nothrow;
-    char* strpbrk(const(char)*, const(char)*) @nogc nothrow;
-    c_ulong strspn(const(char)*, const(char)*) @nogc nothrow;
+    static __uint64_t __uint64_identity(__uint64_t) @nogc nothrow;
+    static __uint32_t __uint32_identity(__uint32_t) @nogc nothrow;
+    static __uint16_t __uint16_identity(__uint16_t) @nogc nothrow;
+    alias timer_t = void*;
+    alias time_t = c_long;
+    struct timeval
+    {
+        __time_t tv_sec;
+        __suseconds_t tv_usec;
+    }
+    struct timespec
+    {
+        __time_t tv_sec;
+        __syscall_slong_t tv_nsec;
+    }
+    struct osockaddr
+    {
+        ushort sa_family;
+        ubyte[14] sa_data;
+    }
+    struct iovec
+    {
+        void* iov_base;
+        size_t iov_len;
+    }
+    alias sigset_t = __sigset_t;
+    alias locale_t = __locale_struct*;
+    alias clockid_t = int;
+    alias clock_t = c_long;
+    struct __sigset_t
+    {
+        c_ulong[16] __val;
+    }
+    alias __locale_t = __locale_struct*;
+    struct __locale_struct
+    {
+        __locale_data*[13] __locales;
+        const(ushort)* __ctype_b;
+        const(int)* __ctype_tolower;
+        const(int)* __ctype_toupper;
+        const(char)*[13] __names;
+    }
+    alias __sig_atomic_t = int;
+    alias __socklen_t = uint;
+    alias __intptr_t = c_long;
+    alias __caddr_t = char*;
+    alias __loff_t = c_long;
+    alias __syscall_ulong_t = c_ulong;
+    alias __syscall_slong_t = c_long;
+    alias __ssize_t = c_long;
+    alias __fsword_t = c_long;
+    alias __fsfilcnt64_t = c_ulong;
+    alias __fsfilcnt_t = c_ulong;
+    alias __fsblkcnt64_t = c_ulong;
+    alias __fsblkcnt_t = c_ulong;
+    alias __blkcnt64_t = c_long;
+    alias __blkcnt_t = c_long;
+    alias __blksize_t = c_long;
+    alias __timer_t = void*;
+    alias __clockid_t = int;
+    alias __key_t = int;
+    alias __daddr_t = int;
+    alias __suseconds_t = c_long;
+    alias __useconds_t = uint;
+    alias __time_t = c_long;
+    alias __id_t = uint;
+    alias __rlim64_t = c_ulong;
+    alias __rlim_t = c_ulong;
+    alias __clock_t = c_long;
+    struct __fsid_t
+    {
+        int[2] __val;
+    }
+    alias __pid_t = int;
+    alias __off64_t = c_long;
+    alias __off_t = c_long;
+    alias __nlink_t = c_ulong;
+    alias __mode_t = uint;
     alias SYSSOCKET = int;
     alias UDPSOCKET = int;
     alias UDTSOCKET = int;
@@ -293,9 +338,9 @@ extern(C)
     alias UDT_TRACEINFO = UDT_CPerfMon_;
     struct UDT_CPerfMon_
     {
-        c_long msTimeStamp;
-        c_long pktSentTotal;
-        c_long pktRecvTotal;
+        int64_t msTimeStamp;
+        int64_t pktSentTotal;
+        int64_t pktRecvTotal;
         int pktSndLossTotal;
         int pktRcvLossTotal;
         int pktRetransTotal;
@@ -303,9 +348,9 @@ extern(C)
         int pktRecvACKTotal;
         int pktSentNAKTotal;
         int pktRecvNAKTotal;
-        c_long usSndDurationTotal;
-        c_long pktSent;
-        c_long pktRecv;
+        int64_t usSndDurationTotal;
+        int64_t pktSent;
+        int64_t pktRecv;
         int pktSndLoss;
         int pktRcvLoss;
         int pktRetrans;
@@ -315,7 +360,7 @@ extern(C)
         int pktRecvNAK;
         double mbpsSendRate;
         double mbpsRecvRate;
-        c_long usSndDuration;
+        int64_t usSndDuration;
         double usPktSndPeriod;
         int pktFlowWindow;
         int pktCongestionWindow;
@@ -325,32 +370,32 @@ extern(C)
         int byteAvailSndBuf;
         int byteAvailRcvBuf;
     }
-    extern __gshared const(int) UDT_INVALID_SOCK;
+    extern __gshared const(UDTSOCKET) UDT_INVALID_SOCK;
     extern __gshared const(int) UDT_ERROR;
     int udt_startup() @nogc nothrow;
     int udt_cleanup() @nogc nothrow;
-    int udt_socket(int, int, int) @nogc nothrow;
-    int udt_bind(int, const(sockaddr)*, int) @nogc nothrow;
-    int udt_bind2(int, int) @nogc nothrow;
-    int udt_listen(int, int) @nogc nothrow;
-    int udt_accept(int, sockaddr*, int*) @nogc nothrow;
-    int udt_connect(int, const(sockaddr)*, int) @nogc nothrow;
-    int udt_close(int) @nogc nothrow;
-    int udt_getpeername(int, sockaddr*, int*) @nogc nothrow;
-    int udt_getsockname(int, sockaddr*, int*) @nogc nothrow;
-    int udt_getsockopt(int, int, int, void*, int*) @nogc nothrow;
-    int udt_setsockopt(int, int, int, const(void)*, int) @nogc nothrow;
-    int udt_send(int, const(char)*, int, int) @nogc nothrow;
-    int udt_recv(int, char*, int, int) @nogc nothrow;
-    int udt_sendmsg(int, const(char)*, int, int, int) @nogc nothrow;
-    int udt_recvmsg(int, char*, int) @nogc nothrow;
-    c_long udt_sendfile2(int, const(char)*, c_long*, c_long, int) @nogc nothrow;
-    c_long udt_recvfile2(int, const(char)*, c_long*, c_long, int) @nogc nothrow;
+    UDTSOCKET udt_socket(int, int, int) @nogc nothrow;
+    int udt_bind(UDTSOCKET, const(sockaddr)*, int) @nogc nothrow;
+    int udt_bind2(UDTSOCKET, UDPSOCKET) @nogc nothrow;
+    int udt_listen(UDTSOCKET, int) @nogc nothrow;
+    UDTSOCKET udt_accept(UDTSOCKET, sockaddr*, int*) @nogc nothrow;
+    int udt_connect(UDTSOCKET, const(sockaddr)*, int) @nogc nothrow;
+    int udt_close(UDTSOCKET) @nogc nothrow;
+    int udt_getpeername(UDTSOCKET, sockaddr*, int*) @nogc nothrow;
+    int udt_getsockname(UDTSOCKET, sockaddr*, int*) @nogc nothrow;
+    int udt_getsockopt(UDTSOCKET, int, int, void*, int*) @nogc nothrow;
+    int udt_setsockopt(UDTSOCKET, int, int, const(void)*, int) @nogc nothrow;
+    int udt_send(UDTSOCKET, const(char)*, int, int) @nogc nothrow;
+    int udt_recv(UDTSOCKET, char*, int, int) @nogc nothrow;
+    int udt_sendmsg(UDTSOCKET, const(char)*, int, int, int) @nogc nothrow;
+    int udt_recvmsg(UDTSOCKET, char*, int) @nogc nothrow;
+    int64_t udt_sendfile2(UDTSOCKET, const(char)*, int64_t*, int64_t, int) @nogc nothrow;
+    int64_t udt_recvfile2(UDTSOCKET, const(char)*, int64_t*, int64_t, int) @nogc nothrow;
     const(char)* udt_getlasterror_desc() @nogc nothrow;
     int udt_getlasterror_code() @nogc nothrow;
     void udt_clearlasterror() @nogc nothrow;
-    int udt_perfmon(int, UDT_CPerfMon_*, int) @nogc nothrow;
-    int udt_getsockstate(int) @nogc nothrow;
+    int udt_perfmon(UDTSOCKET, UDT_TRACEINFO*, int) @nogc nothrow;
+    int udt_getsockstate(UDTSOCKET) @nogc nothrow;
     enum UDT_EPOLLOpt
     {
         UDT_UDT_EPOLL_IN = 1,
@@ -361,423 +406,26 @@ extern(C)
     enum UDT_UDT_EPOLL_OUT = UDT_EPOLLOpt.UDT_UDT_EPOLL_OUT;
     enum UDT_UDT_EPOLL_ERR = UDT_EPOLLOpt.UDT_UDT_EPOLL_ERR;
     int udt_epoll_create() @nogc nothrow;
-    int udt_epoll_add_usock(int, int, const(int)*) @nogc nothrow;
-    int udt_epoll_add_ssock(int, int, const(int)*) @nogc nothrow;
-    int udt_epoll_remove_usock(int, int) @nogc nothrow;
-    int udt_epoll_remove_ssock(int, int) @nogc nothrow;
-    int udt_epoll_wait2(int, int*, int*, int*, int*, c_long, int*, int*, int*, int*) @nogc nothrow;
+    int udt_epoll_add_usock(int, UDTSOCKET, const(int)*) @nogc nothrow;
+    int udt_epoll_add_ssock(int, SYSSOCKET, const(int)*) @nogc nothrow;
+    int udt_epoll_remove_usock(int, UDTSOCKET) @nogc nothrow;
+    int udt_epoll_remove_ssock(int, SYSSOCKET) @nogc nothrow;
+    int udt_epoll_wait2(int, UDTSOCKET*, int*, UDTSOCKET*, int*, int64_t, SYSSOCKET*, int*, SYSSOCKET*, int*) @nogc nothrow;
     int udt_epoll_release(int) @nogc nothrow;
-    uint inet_addr(const(char)*) @nogc nothrow;
-    uint inet_lnaof(in_addr) @nogc nothrow;
-    in_addr inet_makeaddr(uint, uint) @nogc nothrow;
-    uint inet_netof(in_addr) @nogc nothrow;
-    uint inet_network(const(char)*) @nogc nothrow;
+    in_addr_t inet_addr(const(char)*) @nogc nothrow;
+    in_addr_t inet_lnaof(in_addr) @nogc nothrow;
+    in_addr inet_makeaddr(in_addr_t, in_addr_t) @nogc nothrow;
+    in_addr_t inet_netof(in_addr) @nogc nothrow;
+    in_addr_t inet_network(const(char)*) @nogc nothrow;
     char* inet_ntoa(in_addr) @nogc nothrow;
     int inet_pton(int, const(char)*, void*) @nogc nothrow;
-    const(char)* inet_ntop(int, const(void)*, char*, uint) @nogc nothrow;
+    const(char)* inet_ntop(int, const(void)*, char*, socklen_t) @nogc nothrow;
     int inet_aton(const(char)*, in_addr*) @nogc nothrow;
-    char* inet_neta(uint, char*, c_ulong) @nogc nothrow;
-    char* inet_net_ntop(int, const(void)*, int, char*, c_ulong) @nogc nothrow;
-    int inet_net_pton(int, const(char)*, void*, c_ulong) @nogc nothrow;
+    char* inet_neta(in_addr_t, char*, size_t) @nogc nothrow;
+    char* inet_net_ntop(int, const(void)*, int, char*, size_t) @nogc nothrow;
+    int inet_net_pton(int, const(char)*, void*, size_t) @nogc nothrow;
     uint inet_nsap_addr(const(char)*, ubyte*, int) @nogc nothrow;
     char* inet_nsap_ntoa(int, const(ubyte)*, char*) @nogc nothrow;
-    c_ulong strcspn(const(char)*, const(char)*) @nogc nothrow;
-    char* strrchr(const(char)*, int) @nogc nothrow;
-    char* strchr(const(char)*, int) @nogc nothrow;
-    char* strndup(const(char)*, c_ulong) @nogc nothrow;
-    char* strdup(const(char)*) @nogc nothrow;
-    c_ulong strxfrm_l(char*, const(char)*, c_ulong, __locale_struct*) @nogc nothrow;
-    int strcoll_l(const(char)*, const(char)*, __locale_struct*) @nogc nothrow;
-    c_ulong strxfrm(char*, const(char)*, c_ulong) @nogc nothrow;
-    int strcoll(const(char)*, const(char)*) @nogc nothrow;
-    int strncmp(const(char)*, const(char)*, c_ulong) @nogc nothrow;
-    int strcmp(const(char)*, const(char)*) @nogc nothrow;
-    char* strncat(char*, const(char)*, c_ulong) @nogc nothrow;
-    char* strcat(char*, const(char)*) @nogc nothrow;
-    char* strncpy(char*, const(char)*, c_ulong) @nogc nothrow;
-    char* strcpy(char*, const(char)*) @nogc nothrow;
-    void* memchr(const(void)*, int, c_ulong) @nogc nothrow;
-    int memcmp(const(void)*, const(void)*, c_ulong) @nogc nothrow;
-    void* memset(void*, int, c_ulong) @nogc nothrow;
-    void* memccpy(void*, const(void)*, int, c_ulong) @nogc nothrow;
-    void* memmove(void*, const(void)*, c_ulong) @nogc nothrow;
-    static ushort __bswap_16(ushort) @nogc nothrow;
-    static uint __bswap_32(uint) @nogc nothrow;
-    void* memcpy(void*, const(void)*, c_ulong) @nogc nothrow;
-    static c_ulong __bswap_64(c_ulong) @nogc nothrow;
-    int bindresvport6(int, sockaddr_in6*) @nogc nothrow;
-    int bindresvport(int, sockaddr_in*) @nogc nothrow;
-    ushort htons(ushort) @nogc nothrow;
-    uint htonl(uint) @nogc nothrow;
-    ushort ntohs(ushort) @nogc nothrow;
-    uint ntohl(uint) @nogc nothrow;
-    struct group_filter
-    {
-        uint gf_interface;
-        sockaddr_storage gf_group;
-        uint gf_fmode;
-        uint gf_numsrc;
-        sockaddr_storage[1] gf_slist;
-    }
-    struct ip_msfilter
-    {
-        in_addr imsf_multiaddr;
-        in_addr imsf_interface;
-        uint imsf_fmode;
-        uint imsf_numsrc;
-        in_addr[1] imsf_slist;
-    }
-    struct group_source_req
-    {
-        uint gsr_interface;
-        sockaddr_storage gsr_group;
-        sockaddr_storage gsr_source;
-    }
-    struct group_req
-    {
-        uint gr_interface;
-        sockaddr_storage gr_group;
-    }
-    struct ipv6_mreq
-    {
-        in6_addr ipv6mr_multiaddr;
-        uint ipv6mr_interface;
-    }
-    struct ip_mreq_source
-    {
-        in_addr imr_multiaddr;
-        in_addr imr_interface;
-        in_addr imr_sourceaddr;
-    }
-    struct ip_mreq
-    {
-        in_addr imr_multiaddr;
-        in_addr imr_interface;
-    }
-    struct sockaddr_in6
-    {
-        ushort sin6_family;
-        ushort sin6_port;
-        uint sin6_flowinfo;
-        in6_addr sin6_addr;
-        uint sin6_scope_id;
-    }
-    struct sockaddr_in
-    {
-        ushort sin_family;
-        ushort sin_port;
-        in_addr sin_addr;
-        ubyte[8] sin_zero;
-    }
-    extern __gshared const(in6_addr) in6addr_loopback;
-    extern __gshared const(in6_addr) in6addr_any;
-    struct in6_addr
-    {
-        static union _Anonymous_1
-        {
-            ubyte[16] __u6_addr8;
-            ushort[8] __u6_addr16;
-            uint[4] __u6_addr32;
-        }
-        _Anonymous_1 __in6_u;
-    }
-    enum _Anonymous_2
-    {
-        IPPORT_ECHO = 7,
-        IPPORT_DISCARD = 9,
-        IPPORT_SYSTAT = 11,
-        IPPORT_DAYTIME = 13,
-        IPPORT_NETSTAT = 15,
-        IPPORT_FTP = 21,
-        IPPORT_TELNET = 23,
-        IPPORT_SMTP = 25,
-        IPPORT_TIMESERVER = 37,
-        IPPORT_NAMESERVER = 42,
-        IPPORT_WHOIS = 43,
-        IPPORT_MTP = 57,
-        IPPORT_TFTP = 69,
-        IPPORT_RJE = 77,
-        IPPORT_FINGER = 79,
-        IPPORT_TTYLINK = 87,
-        IPPORT_SUPDUP = 95,
-        IPPORT_EXECSERVER = 512,
-        IPPORT_LOGINSERVER = 513,
-        IPPORT_CMDSERVER = 514,
-        IPPORT_EFSSERVER = 520,
-        IPPORT_BIFFUDP = 512,
-        IPPORT_WHOSERVER = 513,
-        IPPORT_ROUTESERVER = 520,
-        IPPORT_RESERVED = 1024,
-        IPPORT_USERRESERVED = 5000,
-    }
-    enum IPPORT_ECHO = _Anonymous_2.IPPORT_ECHO;
-    enum IPPORT_DISCARD = _Anonymous_2.IPPORT_DISCARD;
-    enum IPPORT_SYSTAT = _Anonymous_2.IPPORT_SYSTAT;
-    enum IPPORT_DAYTIME = _Anonymous_2.IPPORT_DAYTIME;
-    enum IPPORT_NETSTAT = _Anonymous_2.IPPORT_NETSTAT;
-    enum IPPORT_FTP = _Anonymous_2.IPPORT_FTP;
-    enum IPPORT_TELNET = _Anonymous_2.IPPORT_TELNET;
-    enum IPPORT_SMTP = _Anonymous_2.IPPORT_SMTP;
-    enum IPPORT_TIMESERVER = _Anonymous_2.IPPORT_TIMESERVER;
-    enum IPPORT_NAMESERVER = _Anonymous_2.IPPORT_NAMESERVER;
-    enum IPPORT_WHOIS = _Anonymous_2.IPPORT_WHOIS;
-    enum IPPORT_MTP = _Anonymous_2.IPPORT_MTP;
-    enum IPPORT_TFTP = _Anonymous_2.IPPORT_TFTP;
-    enum IPPORT_RJE = _Anonymous_2.IPPORT_RJE;
-    enum IPPORT_FINGER = _Anonymous_2.IPPORT_FINGER;
-    enum IPPORT_TTYLINK = _Anonymous_2.IPPORT_TTYLINK;
-    enum IPPORT_SUPDUP = _Anonymous_2.IPPORT_SUPDUP;
-    enum IPPORT_EXECSERVER = _Anonymous_2.IPPORT_EXECSERVER;
-    enum IPPORT_LOGINSERVER = _Anonymous_2.IPPORT_LOGINSERVER;
-    enum IPPORT_CMDSERVER = _Anonymous_2.IPPORT_CMDSERVER;
-    enum IPPORT_EFSSERVER = _Anonymous_2.IPPORT_EFSSERVER;
-    enum IPPORT_BIFFUDP = _Anonymous_2.IPPORT_BIFFUDP;
-    enum IPPORT_WHOSERVER = _Anonymous_2.IPPORT_WHOSERVER;
-    enum IPPORT_ROUTESERVER = _Anonymous_2.IPPORT_ROUTESERVER;
-    enum IPPORT_RESERVED = _Anonymous_2.IPPORT_RESERVED;
-    enum IPPORT_USERRESERVED = _Anonymous_2.IPPORT_USERRESERVED;
-    alias in_port_t = ushort;
-    enum _Anonymous_3
-    {
-        IPPROTO_HOPOPTS = 0,
-        IPPROTO_ROUTING = 43,
-        IPPROTO_FRAGMENT = 44,
-        IPPROTO_ICMPV6 = 58,
-        IPPROTO_NONE = 59,
-        IPPROTO_DSTOPTS = 60,
-        IPPROTO_MH = 135,
-    }
-    enum IPPROTO_HOPOPTS = _Anonymous_3.IPPROTO_HOPOPTS;
-    enum IPPROTO_ROUTING = _Anonymous_3.IPPROTO_ROUTING;
-    enum IPPROTO_FRAGMENT = _Anonymous_3.IPPROTO_FRAGMENT;
-    enum IPPROTO_ICMPV6 = _Anonymous_3.IPPROTO_ICMPV6;
-    enum IPPROTO_NONE = _Anonymous_3.IPPROTO_NONE;
-    enum IPPROTO_DSTOPTS = _Anonymous_3.IPPROTO_DSTOPTS;
-    enum IPPROTO_MH = _Anonymous_3.IPPROTO_MH;
-    enum _Anonymous_4
-    {
-        IPPROTO_IP = 0,
-        IPPROTO_ICMP = 1,
-        IPPROTO_IGMP = 2,
-        IPPROTO_IPIP = 4,
-        IPPROTO_TCP = 6,
-        IPPROTO_EGP = 8,
-        IPPROTO_PUP = 12,
-        IPPROTO_UDP = 17,
-        IPPROTO_IDP = 22,
-        IPPROTO_TP = 29,
-        IPPROTO_DCCP = 33,
-        IPPROTO_IPV6 = 41,
-        IPPROTO_RSVP = 46,
-        IPPROTO_GRE = 47,
-        IPPROTO_ESP = 50,
-        IPPROTO_AH = 51,
-        IPPROTO_MTP = 92,
-        IPPROTO_BEETPH = 94,
-        IPPROTO_ENCAP = 98,
-        IPPROTO_PIM = 103,
-        IPPROTO_COMP = 108,
-        IPPROTO_SCTP = 132,
-        IPPROTO_UDPLITE = 136,
-        IPPROTO_MPLS = 137,
-        IPPROTO_RAW = 255,
-        IPPROTO_MAX = 256,
-    }
-    enum IPPROTO_IP = _Anonymous_4.IPPROTO_IP;
-    enum IPPROTO_ICMP = _Anonymous_4.IPPROTO_ICMP;
-    enum IPPROTO_IGMP = _Anonymous_4.IPPROTO_IGMP;
-    enum IPPROTO_IPIP = _Anonymous_4.IPPROTO_IPIP;
-    enum IPPROTO_TCP = _Anonymous_4.IPPROTO_TCP;
-    enum IPPROTO_EGP = _Anonymous_4.IPPROTO_EGP;
-    enum IPPROTO_PUP = _Anonymous_4.IPPROTO_PUP;
-    enum IPPROTO_UDP = _Anonymous_4.IPPROTO_UDP;
-    enum IPPROTO_IDP = _Anonymous_4.IPPROTO_IDP;
-    enum IPPROTO_TP = _Anonymous_4.IPPROTO_TP;
-    enum IPPROTO_DCCP = _Anonymous_4.IPPROTO_DCCP;
-    enum IPPROTO_IPV6 = _Anonymous_4.IPPROTO_IPV6;
-    enum IPPROTO_RSVP = _Anonymous_4.IPPROTO_RSVP;
-    enum IPPROTO_GRE = _Anonymous_4.IPPROTO_GRE;
-    enum IPPROTO_ESP = _Anonymous_4.IPPROTO_ESP;
-    enum IPPROTO_AH = _Anonymous_4.IPPROTO_AH;
-    enum IPPROTO_MTP = _Anonymous_4.IPPROTO_MTP;
-    enum IPPROTO_BEETPH = _Anonymous_4.IPPROTO_BEETPH;
-    enum IPPROTO_ENCAP = _Anonymous_4.IPPROTO_ENCAP;
-    enum IPPROTO_PIM = _Anonymous_4.IPPROTO_PIM;
-    enum IPPROTO_COMP = _Anonymous_4.IPPROTO_COMP;
-    enum IPPROTO_SCTP = _Anonymous_4.IPPROTO_SCTP;
-    enum IPPROTO_UDPLITE = _Anonymous_4.IPPROTO_UDPLITE;
-    enum IPPROTO_MPLS = _Anonymous_4.IPPROTO_MPLS;
-    enum IPPROTO_RAW = _Anonymous_4.IPPROTO_RAW;
-    enum IPPROTO_MAX = _Anonymous_4.IPPROTO_MAX;
-    struct in_addr
-    {
-        uint s_addr;
-    }
-    alias in_addr_t = uint;
-    struct ip_opts
-    {
-        in_addr ip_dst;
-        char[40] ip_opts_;
-    }
-    struct ip_mreqn
-    {
-        in_addr imr_multiaddr;
-        in_addr imr_address;
-        int imr_ifindex;
-    }
-    struct in_pktinfo
-    {
-        int ipi_ifindex;
-        in_addr ipi_spec_dst;
-        in_addr ipi_addr;
-    }
-    static c_ulong __uint64_identity(c_ulong) @nogc nothrow;
-    static uint __uint32_identity(uint) @nogc nothrow;
-    static ushort __uint16_identity(ushort) @nogc nothrow;
-    alias timer_t = void*;
-    alias time_t = c_long;
-    struct timeval
-    {
-        c_long tv_sec;
-        c_long tv_usec;
-    }
-    struct timespec
-    {
-        c_long tv_sec;
-        c_long tv_nsec;
-    }
-    struct osockaddr
-    {
-        ushort sa_family;
-        ubyte[14] sa_data;
-    }
-    struct iovec
-    {
-        void* iov_base;
-        c_ulong iov_len;
-    }
-    alias sigset_t = __sigset_t;
-    alias locale_t = __locale_struct*;
-    alias clockid_t = int;
-    alias clock_t = c_long;
-    struct __sigset_t
-    {
-        c_ulong[16] __val;
-    }
-    alias __locale_t = __locale_struct*;
-    struct __locale_struct
-    {
-        __locale_data*[13] __locales;
-        const(ushort)* __ctype_b;
-        const(int)* __ctype_tolower;
-        const(int)* __ctype_toupper;
-        const(char)*[13] __names;
-    }
-    alias __sig_atomic_t = int;
-    alias __socklen_t = uint;
-    alias __intptr_t = c_long;
-    alias __caddr_t = char*;
-    alias __loff_t = c_long;
-    struct __pthread_rwlock_arch_t
-    {
-        uint __readers;
-        uint __writers;
-        uint __wrphase_futex;
-        uint __writers_futex;
-        uint __pad3;
-        uint __pad4;
-        int __cur_writer;
-        int __shared;
-        byte __rwelision;
-        ubyte[7] __pad1;
-        c_ulong __pad2;
-        uint __flags;
-    }
-    alias __syscall_ulong_t = c_ulong;
-    alias pthread_t = c_ulong;
-    union pthread_mutexattr_t
-    {
-        char[4] __size;
-        int __align;
-    }
-    union pthread_condattr_t
-    {
-        char[4] __size;
-        int __align;
-    }
-    alias pthread_key_t = uint;
-    alias pthread_once_t = int;
-    union pthread_attr_t
-    {
-        char[56] __size;
-        c_long __align;
-    }
-    union pthread_mutex_t
-    {
-        __pthread_mutex_s __data;
-        char[40] __size;
-        c_long __align;
-    }
-    union pthread_cond_t
-    {
-        __pthread_cond_s __data;
-        char[48] __size;
-        long __align;
-    }
-    union pthread_rwlock_t
-    {
-        __pthread_rwlock_arch_t __data;
-        char[56] __size;
-        c_long __align;
-    }
-    union pthread_rwlockattr_t
-    {
-        char[8] __size;
-        c_long __align;
-    }
-    alias pthread_spinlock_t = int;
-    union pthread_barrier_t
-    {
-        char[32] __size;
-        c_long __align;
-    }
-    union pthread_barrierattr_t
-    {
-        char[4] __size;
-        int __align;
-    }
-    alias __syscall_slong_t = c_long;
-    alias __ssize_t = c_long;
-    alias __fsword_t = c_long;
-    alias sa_family_t = ushort;
-    alias __fsfilcnt64_t = c_ulong;
-    alias socklen_t = uint;
-    alias __fsfilcnt_t = c_ulong;
-    alias __fsblkcnt64_t = c_ulong;
-    alias __fsblkcnt_t = c_ulong;
-    alias __blkcnt64_t = c_long;
-    alias __blkcnt_t = c_long;
-    alias __blksize_t = c_long;
-    alias __timer_t = void*;
-    alias __clockid_t = int;
-    alias __key_t = int;
-    alias __daddr_t = int;
-    alias __suseconds_t = c_long;
-    alias __useconds_t = uint;
-    alias __time_t = c_long;
-    alias __id_t = uint;
-    alias __rlim64_t = c_ulong;
-    alias __rlim_t = c_ulong;
-    alias __clock_t = c_long;
-    struct __fsid_t
-    {
-        int[2] __val;
-    }
-    alias __pid_t = int;
-    alias __off64_t = c_long;
-    alias __off_t = c_long;
-    alias __nlink_t = c_ulong;
-    alias __mode_t = uint;
     alias __ino64_t = c_ulong;
     alias __ino_t = c_ulong;
     alias __gid_t = uint;
@@ -787,14 +435,6 @@ extern(C)
     alias __intmax_t = c_long;
     alias __u_quad_t = c_ulong;
     alias __quad_t = c_long;
-    alias __uint_least64_t = c_ulong;
-    alias __int_least64_t = c_long;
-    alias __uint_least32_t = uint;
-    alias __int_least32_t = int;
-    alias __uint_least16_t = ushort;
-    alias __int_least16_t = short;
-    alias __uint_least8_t = ubyte;
-    alias __int_least8_t = byte;
     alias __uint64_t = c_ulong;
     alias __int64_t = c_long;
     alias __uint32_t = uint;
@@ -809,98 +449,42 @@ extern(C)
     alias __u_char = ubyte;
     struct __pthread_cond_s
     {
-        static union _Anonymous_5
+        static union _Anonymous_1
         {
             ulong __wseq;
-            static struct _Anonymous_6
+            static struct _Anonymous_2
             {
                 uint __low;
                 uint __high;
             }
-            _Anonymous_6 __wseq32;
+            _Anonymous_2 __wseq32;
         }
-        _Anonymous_5 _anonymous_7;
-        auto __wseq() @property @nogc pure nothrow { return _anonymous_7.__wseq; }
-        void __wseq(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_7.__wseq = val; }
-        auto __wseq32() @property @nogc pure nothrow { return _anonymous_7.__wseq32; }
-        void __wseq32(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_7.__wseq32 = val; }
-        static union _Anonymous_8
+        _Anonymous_1 _anonymous_3;
+        auto __wseq() @property @nogc pure nothrow { return _anonymous_3.__wseq; }
+        void __wseq(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_3.__wseq = val; }
+        auto __wseq32() @property @nogc pure nothrow { return _anonymous_3.__wseq32; }
+        void __wseq32(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_3.__wseq32 = val; }
+        static union _Anonymous_4
         {
             ulong __g1_start;
-            static struct _Anonymous_9
+            static struct _Anonymous_5
             {
                 uint __low;
                 uint __high;
             }
-            _Anonymous_9 __g1_start32;
+            _Anonymous_5 __g1_start32;
         }
-        _Anonymous_8 _anonymous_10;
-        auto __g1_start() @property @nogc pure nothrow { return _anonymous_10.__g1_start; }
-        void __g1_start(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_10.__g1_start = val; }
-        auto __g1_start32() @property @nogc pure nothrow { return _anonymous_10.__g1_start32; }
-        void __g1_start32(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_10.__g1_start32 = val; }
+        _Anonymous_4 _anonymous_6;
+        auto __g1_start() @property @nogc pure nothrow { return _anonymous_6.__g1_start; }
+        void __g1_start(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_6.__g1_start = val; }
+        auto __g1_start32() @property @nogc pure nothrow { return _anonymous_6.__g1_start32; }
+        void __g1_start32(_T_)(auto ref _T_ val) @property @nogc pure nothrow { _anonymous_6.__g1_start32 = val; }
         uint[2] __g_refs;
         uint[2] __g_size;
         uint __g1_orig_size;
         uint __wrefs;
         uint[2] __g_signals;
     }
-    struct sockaddr
-    {
-        ushort sa_family;
-        char[14] sa_data;
-    }
-    struct sockaddr_storage
-    {
-        ushort ss_family;
-        char[118] __ss_padding;
-        c_ulong __ss_align;
-    }
-    enum _Anonymous_11
-    {
-        MSG_OOB = 1,
-        MSG_PEEK = 2,
-        MSG_DONTROUTE = 4,
-        MSG_CTRUNC = 8,
-        MSG_PROXY = 16,
-        MSG_TRUNC = 32,
-        MSG_DONTWAIT = 64,
-        MSG_EOR = 128,
-        MSG_WAITALL = 256,
-        MSG_FIN = 512,
-        MSG_SYN = 1024,
-        MSG_CONFIRM = 2048,
-        MSG_RST = 4096,
-        MSG_ERRQUEUE = 8192,
-        MSG_NOSIGNAL = 16384,
-        MSG_MORE = 32768,
-        MSG_WAITFORONE = 65536,
-        MSG_BATCH = 262144,
-        MSG_ZEROCOPY = 67108864,
-        MSG_FASTOPEN = 536870912,
-        MSG_CMSG_CLOEXEC = 1073741824,
-    }
-    enum MSG_OOB = _Anonymous_11.MSG_OOB;
-    enum MSG_PEEK = _Anonymous_11.MSG_PEEK;
-    enum MSG_DONTROUTE = _Anonymous_11.MSG_DONTROUTE;
-    enum MSG_CTRUNC = _Anonymous_11.MSG_CTRUNC;
-    enum MSG_PROXY = _Anonymous_11.MSG_PROXY;
-    enum MSG_TRUNC = _Anonymous_11.MSG_TRUNC;
-    enum MSG_DONTWAIT = _Anonymous_11.MSG_DONTWAIT;
-    enum MSG_EOR = _Anonymous_11.MSG_EOR;
-    enum MSG_WAITALL = _Anonymous_11.MSG_WAITALL;
-    enum MSG_FIN = _Anonymous_11.MSG_FIN;
-    enum MSG_SYN = _Anonymous_11.MSG_SYN;
-    enum MSG_CONFIRM = _Anonymous_11.MSG_CONFIRM;
-    enum MSG_RST = _Anonymous_11.MSG_RST;
-    enum MSG_ERRQUEUE = _Anonymous_11.MSG_ERRQUEUE;
-    enum MSG_NOSIGNAL = _Anonymous_11.MSG_NOSIGNAL;
-    enum MSG_MORE = _Anonymous_11.MSG_MORE;
-    enum MSG_WAITFORONE = _Anonymous_11.MSG_WAITFORONE;
-    enum MSG_BATCH = _Anonymous_11.MSG_BATCH;
-    enum MSG_ZEROCOPY = _Anonymous_11.MSG_ZEROCOPY;
-    enum MSG_FASTOPEN = _Anonymous_11.MSG_FASTOPEN;
-    enum MSG_CMSG_CLOEXEC = _Anonymous_11.MSG_CMSG_CLOEXEC;
     struct __pthread_mutex_s
     {
         int __lock;
@@ -910,7 +494,7 @@ extern(C)
         int __kind;
         short __spins;
         short __elision;
-        __pthread_internal_list __list;
+        __pthread_list_t __list;
     }
     struct __pthread_internal_list
     {
@@ -947,34 +531,437 @@ extern(C)
     enum SOCK_PACKET = __socket_type.SOCK_PACKET;
     enum SOCK_CLOEXEC = __socket_type.SOCK_CLOEXEC;
     enum SOCK_NONBLOCK = __socket_type.SOCK_NONBLOCK;
-    struct msghdr
-    {
-        void* msg_name;
-        uint msg_namelen;
-        iovec* msg_iov;
-        c_ulong msg_iovlen;
-        void* msg_control;
-        c_ulong msg_controllen;
-        int msg_flags;
-    }
-    struct cmsghdr
-    {
-        c_ulong cmsg_len;
-        int cmsg_level;
-        int cmsg_type;
-        ubyte[0] __cmsg_data;
-    }
     struct linger
     {
         int l_onoff;
         int l_linger;
     }
-    cmsghdr* __cmsg_nxthdr(msghdr*, cmsghdr*) @nogc nothrow;
-    enum _Anonymous_12
+    enum _Anonymous_7
     {
         SCM_RIGHTS = 1,
     }
-    enum SCM_RIGHTS = _Anonymous_12.SCM_RIGHTS;
+    enum SCM_RIGHTS = _Anonymous_7.SCM_RIGHTS;
+    alias size_t = c_ulong;
+    cmsghdr* __cmsg_nxthdr(msghdr*, cmsghdr*) @nogc nothrow;
+    struct cmsghdr
+    {
+        size_t cmsg_len;
+        int cmsg_level;
+        int cmsg_type;
+        ubyte[0] __cmsg_data;
+    }
+    struct msghdr
+    {
+        void* msg_name;
+        socklen_t msg_namelen;
+        iovec* msg_iov;
+        size_t msg_iovlen;
+        void* msg_control;
+        size_t msg_controllen;
+        int msg_flags;
+    }
+    enum _Anonymous_8
+    {
+        MSG_OOB = 1,
+        MSG_PEEK = 2,
+        MSG_DONTROUTE = 4,
+        MSG_CTRUNC = 8,
+        MSG_PROXY = 16,
+        MSG_TRUNC = 32,
+        MSG_DONTWAIT = 64,
+        MSG_EOR = 128,
+        MSG_WAITALL = 256,
+        MSG_FIN = 512,
+        MSG_SYN = 1024,
+        MSG_CONFIRM = 2048,
+        MSG_RST = 4096,
+        MSG_ERRQUEUE = 8192,
+        MSG_NOSIGNAL = 16384,
+        MSG_MORE = 32768,
+        MSG_WAITFORONE = 65536,
+        MSG_BATCH = 262144,
+        MSG_ZEROCOPY = 67108864,
+        MSG_FASTOPEN = 536870912,
+        MSG_CMSG_CLOEXEC = 1073741824,
+    }
+    enum MSG_OOB = _Anonymous_8.MSG_OOB;
+    enum MSG_PEEK = _Anonymous_8.MSG_PEEK;
+    enum MSG_DONTROUTE = _Anonymous_8.MSG_DONTROUTE;
+    enum MSG_CTRUNC = _Anonymous_8.MSG_CTRUNC;
+    enum MSG_PROXY = _Anonymous_8.MSG_PROXY;
+    enum MSG_TRUNC = _Anonymous_8.MSG_TRUNC;
+    enum MSG_DONTWAIT = _Anonymous_8.MSG_DONTWAIT;
+    enum MSG_EOR = _Anonymous_8.MSG_EOR;
+    enum MSG_WAITALL = _Anonymous_8.MSG_WAITALL;
+    enum MSG_FIN = _Anonymous_8.MSG_FIN;
+    enum MSG_SYN = _Anonymous_8.MSG_SYN;
+    enum MSG_CONFIRM = _Anonymous_8.MSG_CONFIRM;
+    enum MSG_RST = _Anonymous_8.MSG_RST;
+    enum MSG_ERRQUEUE = _Anonymous_8.MSG_ERRQUEUE;
+    enum MSG_NOSIGNAL = _Anonymous_8.MSG_NOSIGNAL;
+    enum MSG_MORE = _Anonymous_8.MSG_MORE;
+    enum MSG_WAITFORONE = _Anonymous_8.MSG_WAITFORONE;
+    enum MSG_BATCH = _Anonymous_8.MSG_BATCH;
+    enum MSG_ZEROCOPY = _Anonymous_8.MSG_ZEROCOPY;
+    enum MSG_FASTOPEN = _Anonymous_8.MSG_FASTOPEN;
+    enum MSG_CMSG_CLOEXEC = _Anonymous_8.MSG_CMSG_CLOEXEC;
+    struct sockaddr_storage
+    {
+        sa_family_t ss_family;
+        char[118] __ss_padding;
+        c_ulong __ss_align;
+    }
+    struct sockaddr
+    {
+        sa_family_t sa_family;
+        char[14] sa_data;
+    }
+    alias socklen_t = uint;
+    alias sa_family_t = ushort;
+    union pthread_barrierattr_t
+    {
+        char[4] __size;
+        int __align;
+    }
+    union pthread_barrier_t
+    {
+        char[32] __size;
+        c_long __align;
+    }
+    alias pthread_spinlock_t = int;
+    union pthread_rwlockattr_t
+    {
+        char[8] __size;
+        c_long __align;
+    }
+    union pthread_rwlock_t
+    {
+        __pthread_rwlock_arch_t __data;
+        char[56] __size;
+        c_long __align;
+    }
+    union pthread_cond_t
+    {
+        __pthread_cond_s __data;
+        char[48] __size;
+        long __align;
+    }
+    union pthread_mutex_t
+    {
+        __pthread_mutex_s __data;
+        char[40] __size;
+        c_long __align;
+    }
+    union pthread_attr_t
+    {
+        char[56] __size;
+        c_long __align;
+    }
+    alias pthread_once_t = int;
+    alias pthread_key_t = uint;
+    alias in_addr_t = uint;
+    struct in_addr
+    {
+        in_addr_t s_addr;
+    }
+    enum _Anonymous_9
+    {
+        IPPROTO_IP = 0,
+        IPPROTO_ICMP = 1,
+        IPPROTO_IGMP = 2,
+        IPPROTO_IPIP = 4,
+        IPPROTO_TCP = 6,
+        IPPROTO_EGP = 8,
+        IPPROTO_PUP = 12,
+        IPPROTO_UDP = 17,
+        IPPROTO_IDP = 22,
+        IPPROTO_TP = 29,
+        IPPROTO_DCCP = 33,
+        IPPROTO_IPV6 = 41,
+        IPPROTO_RSVP = 46,
+        IPPROTO_GRE = 47,
+        IPPROTO_ESP = 50,
+        IPPROTO_AH = 51,
+        IPPROTO_MTP = 92,
+        IPPROTO_BEETPH = 94,
+        IPPROTO_ENCAP = 98,
+        IPPROTO_PIM = 103,
+        IPPROTO_COMP = 108,
+        IPPROTO_SCTP = 132,
+        IPPROTO_UDPLITE = 136,
+        IPPROTO_MPLS = 137,
+        IPPROTO_RAW = 255,
+        IPPROTO_MAX = 256,
+    }
+    enum IPPROTO_IP = _Anonymous_9.IPPROTO_IP;
+    enum IPPROTO_ICMP = _Anonymous_9.IPPROTO_ICMP;
+    enum IPPROTO_IGMP = _Anonymous_9.IPPROTO_IGMP;
+    enum IPPROTO_IPIP = _Anonymous_9.IPPROTO_IPIP;
+    enum IPPROTO_TCP = _Anonymous_9.IPPROTO_TCP;
+    enum IPPROTO_EGP = _Anonymous_9.IPPROTO_EGP;
+    enum IPPROTO_PUP = _Anonymous_9.IPPROTO_PUP;
+    enum IPPROTO_UDP = _Anonymous_9.IPPROTO_UDP;
+    enum IPPROTO_IDP = _Anonymous_9.IPPROTO_IDP;
+    enum IPPROTO_TP = _Anonymous_9.IPPROTO_TP;
+    enum IPPROTO_DCCP = _Anonymous_9.IPPROTO_DCCP;
+    enum IPPROTO_IPV6 = _Anonymous_9.IPPROTO_IPV6;
+    enum IPPROTO_RSVP = _Anonymous_9.IPPROTO_RSVP;
+    enum IPPROTO_GRE = _Anonymous_9.IPPROTO_GRE;
+    enum IPPROTO_ESP = _Anonymous_9.IPPROTO_ESP;
+    enum IPPROTO_AH = _Anonymous_9.IPPROTO_AH;
+    enum IPPROTO_MTP = _Anonymous_9.IPPROTO_MTP;
+    enum IPPROTO_BEETPH = _Anonymous_9.IPPROTO_BEETPH;
+    enum IPPROTO_ENCAP = _Anonymous_9.IPPROTO_ENCAP;
+    enum IPPROTO_PIM = _Anonymous_9.IPPROTO_PIM;
+    enum IPPROTO_COMP = _Anonymous_9.IPPROTO_COMP;
+    enum IPPROTO_SCTP = _Anonymous_9.IPPROTO_SCTP;
+    enum IPPROTO_UDPLITE = _Anonymous_9.IPPROTO_UDPLITE;
+    enum IPPROTO_MPLS = _Anonymous_9.IPPROTO_MPLS;
+    enum IPPROTO_RAW = _Anonymous_9.IPPROTO_RAW;
+    enum IPPROTO_MAX = _Anonymous_9.IPPROTO_MAX;
+    union pthread_condattr_t
+    {
+        char[4] __size;
+        int __align;
+    }
+    union pthread_mutexattr_t
+    {
+        char[4] __size;
+        int __align;
+    }
+    alias pthread_t = c_ulong;
+    struct __pthread_rwlock_arch_t
+    {
+        uint __readers;
+        uint __writers;
+        uint __wrphase_futex;
+        uint __writers_futex;
+        uint __pad3;
+        uint __pad4;
+        int __cur_writer;
+        int __shared;
+        byte __rwelision;
+        ubyte[7] __pad1;
+        c_ulong __pad2;
+        uint __flags;
+    }
+    struct in_pktinfo
+    {
+        int ipi_ifindex;
+        in_addr ipi_spec_dst;
+        in_addr ipi_addr;
+    }
+    struct ip_mreqn
+    {
+        in_addr imr_multiaddr;
+        in_addr imr_address;
+        int imr_ifindex;
+    }
+    struct ip_opts
+    {
+        in_addr ip_dst;
+        char[40] ip_opts_;
+    }
+    enum _Anonymous_10
+    {
+        IPPROTO_HOPOPTS = 0,
+        IPPROTO_ROUTING = 43,
+        IPPROTO_FRAGMENT = 44,
+        IPPROTO_ICMPV6 = 58,
+        IPPROTO_NONE = 59,
+        IPPROTO_DSTOPTS = 60,
+        IPPROTO_MH = 135,
+    }
+    enum IPPROTO_HOPOPTS = _Anonymous_10.IPPROTO_HOPOPTS;
+    enum IPPROTO_ROUTING = _Anonymous_10.IPPROTO_ROUTING;
+    enum IPPROTO_FRAGMENT = _Anonymous_10.IPPROTO_FRAGMENT;
+    enum IPPROTO_ICMPV6 = _Anonymous_10.IPPROTO_ICMPV6;
+    enum IPPROTO_NONE = _Anonymous_10.IPPROTO_NONE;
+    enum IPPROTO_DSTOPTS = _Anonymous_10.IPPROTO_DSTOPTS;
+    enum IPPROTO_MH = _Anonymous_10.IPPROTO_MH;
+    alias in_port_t = ushort;
+    enum _Anonymous_11
+    {
+        IPPORT_ECHO = 7,
+        IPPORT_DISCARD = 9,
+        IPPORT_SYSTAT = 11,
+        IPPORT_DAYTIME = 13,
+        IPPORT_NETSTAT = 15,
+        IPPORT_FTP = 21,
+        IPPORT_TELNET = 23,
+        IPPORT_SMTP = 25,
+        IPPORT_TIMESERVER = 37,
+        IPPORT_NAMESERVER = 42,
+        IPPORT_WHOIS = 43,
+        IPPORT_MTP = 57,
+        IPPORT_TFTP = 69,
+        IPPORT_RJE = 77,
+        IPPORT_FINGER = 79,
+        IPPORT_TTYLINK = 87,
+        IPPORT_SUPDUP = 95,
+        IPPORT_EXECSERVER = 512,
+        IPPORT_LOGINSERVER = 513,
+        IPPORT_CMDSERVER = 514,
+        IPPORT_EFSSERVER = 520,
+        IPPORT_BIFFUDP = 512,
+        IPPORT_WHOSERVER = 513,
+        IPPORT_ROUTESERVER = 520,
+        IPPORT_RESERVED = 1024,
+        IPPORT_USERRESERVED = 5000,
+    }
+    enum IPPORT_ECHO = _Anonymous_11.IPPORT_ECHO;
+    enum IPPORT_DISCARD = _Anonymous_11.IPPORT_DISCARD;
+    enum IPPORT_SYSTAT = _Anonymous_11.IPPORT_SYSTAT;
+    enum IPPORT_DAYTIME = _Anonymous_11.IPPORT_DAYTIME;
+    enum IPPORT_NETSTAT = _Anonymous_11.IPPORT_NETSTAT;
+    enum IPPORT_FTP = _Anonymous_11.IPPORT_FTP;
+    enum IPPORT_TELNET = _Anonymous_11.IPPORT_TELNET;
+    enum IPPORT_SMTP = _Anonymous_11.IPPORT_SMTP;
+    enum IPPORT_TIMESERVER = _Anonymous_11.IPPORT_TIMESERVER;
+    enum IPPORT_NAMESERVER = _Anonymous_11.IPPORT_NAMESERVER;
+    enum IPPORT_WHOIS = _Anonymous_11.IPPORT_WHOIS;
+    enum IPPORT_MTP = _Anonymous_11.IPPORT_MTP;
+    enum IPPORT_TFTP = _Anonymous_11.IPPORT_TFTP;
+    enum IPPORT_RJE = _Anonymous_11.IPPORT_RJE;
+    enum IPPORT_FINGER = _Anonymous_11.IPPORT_FINGER;
+    enum IPPORT_TTYLINK = _Anonymous_11.IPPORT_TTYLINK;
+    enum IPPORT_SUPDUP = _Anonymous_11.IPPORT_SUPDUP;
+    enum IPPORT_EXECSERVER = _Anonymous_11.IPPORT_EXECSERVER;
+    enum IPPORT_LOGINSERVER = _Anonymous_11.IPPORT_LOGINSERVER;
+    enum IPPORT_CMDSERVER = _Anonymous_11.IPPORT_CMDSERVER;
+    enum IPPORT_EFSSERVER = _Anonymous_11.IPPORT_EFSSERVER;
+    enum IPPORT_BIFFUDP = _Anonymous_11.IPPORT_BIFFUDP;
+    enum IPPORT_WHOSERVER = _Anonymous_11.IPPORT_WHOSERVER;
+    enum IPPORT_ROUTESERVER = _Anonymous_11.IPPORT_ROUTESERVER;
+    enum IPPORT_RESERVED = _Anonymous_11.IPPORT_RESERVED;
+    enum IPPORT_USERRESERVED = _Anonymous_11.IPPORT_USERRESERVED;
+    int strncasecmp_l(const(char)*, const(char)*, size_t, locale_t) @nogc nothrow;
+    int strcasecmp_l(const(char)*, const(char)*, locale_t) @nogc nothrow;
+    struct in6_addr
+    {
+        static union _Anonymous_12
+        {
+            uint8_t[16] __u6_addr8;
+            uint16_t[8] __u6_addr16;
+            uint32_t[4] __u6_addr32;
+        }
+        _Anonymous_12 __in6_u;
+    }
+    extern __gshared const(in6_addr) in6addr_any;
+    extern __gshared const(in6_addr) in6addr_loopback;
+    int strncasecmp(const(char)*, const(char)*, size_t) @nogc nothrow;
+    struct sockaddr_in
+    {
+        sa_family_t sin_family;
+        in_port_t sin_port;
+        in_addr sin_addr;
+        ubyte[8] sin_zero;
+    }
+    struct sockaddr_in6
+    {
+        sa_family_t sin6_family;
+        in_port_t sin6_port;
+        uint32_t sin6_flowinfo;
+        in6_addr sin6_addr;
+        uint32_t sin6_scope_id;
+    }
+    struct ip_mreq
+    {
+        in_addr imr_multiaddr;
+        in_addr imr_interface;
+    }
+    struct ip_mreq_source
+    {
+        in_addr imr_multiaddr;
+        in_addr imr_interface;
+        in_addr imr_sourceaddr;
+    }
+    struct ipv6_mreq
+    {
+        in6_addr ipv6mr_multiaddr;
+        uint ipv6mr_interface;
+    }
+    struct group_req
+    {
+        uint32_t gr_interface;
+        sockaddr_storage gr_group;
+    }
+    struct group_source_req
+    {
+        uint32_t gsr_interface;
+        sockaddr_storage gsr_group;
+        sockaddr_storage gsr_source;
+    }
+    struct ip_msfilter
+    {
+        in_addr imsf_multiaddr;
+        in_addr imsf_interface;
+        uint32_t imsf_fmode;
+        uint32_t imsf_numsrc;
+        in_addr[1] imsf_slist;
+    }
+    struct group_filter
+    {
+        uint32_t gf_interface;
+        sockaddr_storage gf_group;
+        uint32_t gf_fmode;
+        uint32_t gf_numsrc;
+        sockaddr_storage[1] gf_slist;
+    }
+    int strcasecmp(const(char)*, const(char)*) @nogc nothrow;
+    uint32_t ntohl(uint32_t) @nogc nothrow;
+    uint16_t ntohs(uint16_t) @nogc nothrow;
+    uint32_t htonl(uint32_t) @nogc nothrow;
+    uint16_t htons(uint16_t) @nogc nothrow;
+    int ffsll(long) @nogc nothrow;
+    int ffsl(c_long) @nogc nothrow;
+    int bindresvport(int, sockaddr_in*) @nogc nothrow;
+    int bindresvport6(int, sockaddr_in6*) @nogc nothrow;
+    int ffs(int) @nogc nothrow;
+    char* rindex(const(char)*, int) @nogc nothrow;
+    char* index(const(char)*, int) @nogc nothrow;
+    void* memcpy(void*, const(void)*, size_t) @nogc nothrow;
+    void* memmove(void*, const(void)*, size_t) @nogc nothrow;
+    void* memccpy(void*, const(void)*, int, size_t) @nogc nothrow;
+    void* memset(void*, int, size_t) @nogc nothrow;
+    int memcmp(const(void)*, const(void)*, size_t) @nogc nothrow;
+    void* memchr(const(void)*, int, size_t) @nogc nothrow;
+    char* strcpy(char*, const(char)*) @nogc nothrow;
+    char* strncpy(char*, const(char)*, size_t) @nogc nothrow;
+    char* strcat(char*, const(char)*) @nogc nothrow;
+    char* strncat(char*, const(char)*, size_t) @nogc nothrow;
+    int strcmp(const(char)*, const(char)*) @nogc nothrow;
+    int strncmp(const(char)*, const(char)*, size_t) @nogc nothrow;
+    int strcoll(const(char)*, const(char)*) @nogc nothrow;
+    c_ulong strxfrm(char*, const(char)*, size_t) @nogc nothrow;
+    int strcoll_l(const(char)*, const(char)*, locale_t) @nogc nothrow;
+    size_t strxfrm_l(char*, const(char)*, size_t, locale_t) @nogc nothrow;
+    char* strdup(const(char)*) @nogc nothrow;
+    char* strndup(const(char)*, size_t) @nogc nothrow;
+    char* strchr(const(char)*, int) @nogc nothrow;
+    char* strrchr(const(char)*, int) @nogc nothrow;
+    c_ulong strcspn(const(char)*, const(char)*) @nogc nothrow;
+    c_ulong strspn(const(char)*, const(char)*) @nogc nothrow;
+    char* strpbrk(const(char)*, const(char)*) @nogc nothrow;
+    char* strstr(const(char)*, const(char)*) @nogc nothrow;
+    char* strtok(char*, const(char)*) @nogc nothrow;
+    char* __strtok_r(char*, const(char)*, char**) @nogc nothrow;
+    char* strtok_r(char*, const(char)*, char**) @nogc nothrow;
+    c_ulong strlen(const(char)*) @nogc nothrow;
+    size_t strnlen(const(char)*, size_t) @nogc nothrow;
+    char* strerror(int) @nogc nothrow;
+    int strerror_r(int, char*, size_t) @nogc nothrow;
+    char* strerror_l(int, locale_t) @nogc nothrow;
+    void explicit_bzero(void*, size_t) @nogc nothrow;
+    char* strsep(char**, const(char)*) @nogc nothrow;
+    char* strsignal(int) @nogc nothrow;
+    char* __stpcpy(char*, const(char)*) @nogc nothrow;
+    char* stpcpy(char*, const(char)*) @nogc nothrow;
+    char* __stpncpy(char*, const(char)*, size_t) @nogc nothrow;
+    char* stpncpy(char*, const(char)*, size_t) @nogc nothrow;
+    void bzero(void*, size_t) @nogc nothrow;
+    int bcmp(const(void)*, const(void)*, size_t) @nogc nothrow;
+    void bcopy(const(void)*, void*, size_t) @nogc nothrow;
 }
 
 
