@@ -11,7 +11,6 @@ matrix:
     # - d: ldc-1.10.0
 
 script:
-  - ./install.sh
   - export PATH=$PATH:dpp/bin
   - ./ci.sh
 
