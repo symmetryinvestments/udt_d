@@ -502,11 +502,11 @@ extern(C)
         __pthread_internal_list* __next;
     }
     alias __pthread_list_t = __pthread_internal_list;
-    alias uint64_t = c_ulong;
+    alias uint64_t = ulong;  // must be careful with this
     alias uint32_t = uint;
     alias uint16_t = ushort;
     alias uint8_t = ubyte;
-    alias int64_t = c_long;
+    alias int64_t = long;  // must be careful with this
     alias int32_t = int;
     alias int16_t = short;
     alias int8_t = byte;
@@ -1018,8 +1018,7 @@ struct SocketAddressStorage {
  void getNameInfo() {
      import std.traits: Parameters;
      version(Windows) {
-         import core.sys.windows.winsock2: getnameinfo, gai_strerrorW;
-         alias gai_strerror = gai_strerrorW;
+         import core.sys.windows.winsock2: getnameinfo;
      } else
            import core.sys.posix.netdb: getnameinfo, gai_strerror;
 
@@ -1032,9 +1031,11 @@ struct SocketAddressStorage {
 
    AddressInfoFlags.NUMERICHOST);
 
-  enforce(rslt == 0,
-   format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz())
-  );
+  version(Windows)
+      enforce(rslt == 0, "getnameinfo error");
+  else
+      enforce(rslt == 0,
+              format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz()));
  }
 }
 

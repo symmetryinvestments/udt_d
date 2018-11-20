@@ -12,4 +12,5 @@ udt_d-test-*
 *.o
 *.obj
 *.lst
-dpp
+*.exp
+*.pdb
