@@ -993,18 +993,6 @@ struct addrinfo
   addrinfo *ai_next;
 }
 
-extern (C) int getaddrinfo (const char *name,
-                        const char *service,
-                        const addrinfo *req,
-                        addrinfo **pai);
-extern (C) void freeaddrinfo (addrinfo *__ai);
-
-extern (C) int getnameinfo (const sockaddr *sa,
-                        socklen_t __salen, char *host,
-                        socklen_t __hostlen, char *serv,
-                        socklen_t __servlen, int __flags);
-
-extern(C) char* gai_strerror(int errcode);
 
 struct SocketAddress
 {
@@ -1028,11 +1016,19 @@ struct SocketAddressStorage {
  }
 
  void getNameInfo() {
-  static import core.sys.posix.netdb;
+     import std.traits: Parameters;
+     version(Windows) {
+         import core.sys.windows.winsock2: getnameinfo, gai_strerrorW;
+         alias gai_strerror = gai_strerrorW;
+     } else
+           import core.sys.posix.netdb: getnameinfo, gai_strerror;
 
-  int rslt = getnameinfo(cast(sockaddr*)&this.handle, this.handle.sizeof.to!int,
-   this.clienthost.ptr, this.clienthost.length.to!int,
-   this.clientservice.ptr, this.clientservice.length.to!int,
+  int rslt = getnameinfo(cast(Parameters!getnameinfo[0]) &this.handle,
+                         this.handle.sizeof.to!int,
+                         this.clienthost.ptr,
+                         this.clienthost.length.to!int,
+                         this.clientservice.ptr,
+                         this.clientservice.length.to!int,
 
    AddressInfoFlags.NUMERICHOST);
 
