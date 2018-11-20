@@ -3,9 +3,6 @@ environment:
  matrix:
   - DC: dmd
     DVersion: 2.083.0
-    arch: x64
-  - DC: dmd
-    DVersion: 2.083.0
     arch: x86
 
 skip_tags: true
@@ -81,4 +78,5 @@ test_script:
  - echo %DC%
  - echo %PATH%
  - '%DC% --version'
+ - git submodule update --recursive --init
  - build\\ci.bat
