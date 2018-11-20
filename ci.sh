@@ -14,23 +14,23 @@ popd
 
 echo Building libudpwrap.a
 pushd "$SCRIPT_DIR"
-dub build
+dub build --compiler="$DC"
 popd
 
 
 echo Building sendfile
 pushd "$SCRIPT_DIR"/sendfile
-dub build
+dub build --compiler="$DC"
 popd
 
 
 echo Building recvfile
 pushd "$SCRIPT_DIR"/recvfile
-dub build
+dub build --compiler="$DC"
 popd
 
 
 echo Running tests
 pushd "$SCRIPT_DIR"/test
-dub run
+dub run --compiler="$DC"
 popd
