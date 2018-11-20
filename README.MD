@@ -1,3 +1,6 @@
+# udt_d
+
+[![Build Status](https://travis-ci.org/atilaneves/udt_d.png?branch=master)](https://travis-ci.org/kaleidicassociates/udt_d)
 
 Command-line tools and D wrapper for UDT - reliable UDP data transfer library
 
