@@ -17,21 +17,6 @@ mixin dpp.EnumD!("EpollOption",UDT_EPOLLOpt,"UDT_UDT_");
 
 alias AddressFamily = typeof(AF_INET);
 
-/*
-   int ffs(int) @nogc nothrow;
-    int socketpair(int, int, int, int*) @nogc nothrow;
-    int ffsl(c_long) @nogc nothrow;
-    int ffsll(long) @nogc nothrow;
-    int pselect(int, fd_set*, fd_set*, fd_set*, const(timespec)*, const(__sigset_t)*) @nogc nothrow;
-    ssize_t recvfrom(int, void*, size_t, int, sockaddr*, socklen_t*) @nogc nothrow;
-    ssize_t sendmsg(int, const(msghdr)*, int) @nogc nothrow;
-    ssize_t recvmsg(int, msghdr*, int) @nogc nothrow;
-    int udt_epoll_remove_usock(int, UDTSOCKET) @nogc nothrow;
-    cmsghdr* __cmsg_nxthdr(msghdr*, cmsghdr*) @nogc nothrow;
-    int bindresvport(int, sockaddr_in*) @nogc nothrow;
-    int bindresvport6(int, sockaddr_in6*) @nogc nothrow;
-    int select(int, fd_set*, fd_set*, fd_set*, timeval*) @nogc nothrow;
-*/
 
 struct addrinfo
 {
@@ -45,18 +30,7 @@ struct addrinfo
   addrinfo *ai_next;     /* Pointer to next in list.  */
 }
 
-extern (C) int getaddrinfo (const char *name,
-                        const char *service,
-                        const addrinfo *req,
-                        addrinfo **pai);
-extern (C) void freeaddrinfo (addrinfo *__ai);
 
-extern (C) int getnameinfo (const sockaddr *sa,
-                        socklen_t __salen, char *host,
-                        socklen_t __hostlen, char *serv,
-                        socklen_t __servlen, int __flags);
-
-extern(C) char* gai_strerror(int errcode);
 
 struct SocketAddress
 {
@@ -64,9 +38,11 @@ struct SocketAddress
 	alias handle this;
 
 }
+
+
 struct SocketAddressStorage {
 	sockaddr_storage handle;
-	private enum NI_MAXHOST=200;
+	private enum NI_MAXHOST = 200;
 	private enum NI_MAXSERV = 200;
 	private char[NI_MAXHOST] clienthost;
 	private char[NI_MAXSERV] clientservice;
@@ -80,17 +56,26 @@ struct SocketAddressStorage {
 	}
 
 	void getNameInfo() {
-		static import core.sys.posix.netdb;
+		import std.traits: Parameters;
+		version(Windows) {
+			import core.sys.windows.winsock2: getnameinfo;
+			alias gai_strerror = gai_strerrorA;
+		} else
+			  import core.sys.posix.netdb: getnameinfo, gai_strerror;
 
-		int rslt = getnameinfo(cast(sockaddr*)&this.handle, this.handle.sizeof.to!int, 
-			this.clienthost.ptr, this.clienthost.length.to!int,
-			this.clientservice.ptr, this.clientservice.length.to!int,
-			//AddressInfoFlags.NUMERICHOST|core.sys.posix.netdb.NI_NUMERICSERV);
+		int rslt = getnameinfo(cast(Parameters!getnameinfo[0])&this.handle,
+							   this.handle.sizeof.to!int,
+							   this.clienthost.ptr,
+							   this.clienthost.length.to!int,
+							   this.clientservice.ptr,
+							   this.clientservice.length.to!int,
 			AddressInfoFlags.NUMERICHOST);
 
-		enforce(rslt == 0, 
-			format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz())
-		);
+        version(Windows)
+            enforce(rslt == 0, "getnameinfo error");
+        else
+            enforce(rslt == 0,
+                    format(" getnameinfo error: %s", gai_strerror(rslt).fromStringz()));
 	}
 }
 
@@ -149,7 +134,7 @@ struct SocketOptions
 	{
 		setSocketOptionHelper!int(socket.handle,Option.UDT_UDT_MSS,size);
 	}
-	
+
 	bool blockingSending()
 	{
 		return getSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_SNDSYN);
@@ -242,7 +227,7 @@ struct SocketOptions
 	}
 
 	//void* congestionControlAlgorithm;
-	
+
 	Duration sendCallTimeOut()
 	{
 		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_SNDTIMEO).msecs();
@@ -272,7 +257,7 @@ struct SocketOptions
 	{
 		setSocketOptionHelper!bool(socket.handle,Option.UDT_UDT_REUSEADDR,reuse);
 	}
-	
+
 	long maximumBytesPerSecondPerConnection()
 	{
 		return getSocketOptionHelper!long(socket.handle,Option.UDT_UDT_MAXBW);
@@ -282,7 +267,7 @@ struct SocketOptions
 	{
 		setSocketOptionHelper!long(socket.handle,Option.UDT_UDT_MAXBW,bw);
 	}
-	
+
 	int state()
 	{
 		return getSocketOptionHelper!int(socket.handle,Option.UDT_UDT_STATE);
@@ -315,7 +300,7 @@ shared static ~this()
 }
 /*
     int select(int, fd_set*, fd_set*, fd_set*, timeval*) @nogc nothrow;
-    
+
     int shutdown(int, int) @nogc nothrow;
     int sockatmark(int) @nogc nothrow;
     int isfdtype(int, int) @nogc nothrow;
@@ -477,7 +462,7 @@ struct UdtSocket
 	auto receiveFile(string filename, ref long offset, ulong size, int block = 7280000)
 	{
 		long result = udt_recvfile2(this.handle, filename.toStringz(), &offset, size, block);
-		enforce(result != UDT_ERROR, 
+		enforce(result != UDT_ERROR,
 			format!"unable to receive data to buffer of length %s: %s"(size, getLastError())
 		);
 		return result;

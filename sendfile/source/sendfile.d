@@ -6,12 +6,19 @@ import std.socket:AddressInfoFlags,AddressFamily,SocketType;
 import std.string : toStringz, fromStringz;
 import std.exception : enforce;
 
+version(Windows)
+	import core.sys.windows.winsock2: getaddrinfo, freeaddrinfo, addrinfo;
+else
+	import core.sys.posix.netdb: getaddrinfo, freeaddrinfo, addrinfo;
+
+
 int main(string[] args) {
+
 	if(args.length>2 || (args.length==2 && args[0].to!int <= 0)) {
 		writeln("usage: sendfile [server_port]");
 		return 0;
 	}
-	
+
 	addrinfo hints;
 	addrinfo* res;
 
@@ -24,14 +31,18 @@ int main(string[] args) {
 	   	service = args[1];
 	}
 
-	if(0 != getaddrinfo(null, service.toStringz(), &hints, &res)) {
+	if(0 != getaddrinfo(null,
+						service.toStringz(),
+						&hints,
+						&res))
+	{
 	   	writeln("illegal port number or port is busy.");
 	   	return -1;
 	}
 
 	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily,
 			to!SocketType(res.ai_socktype), res.ai_protocol);
-	auto aiAddr = SocketAddress(*res.ai_addr);
+	auto aiAddr = SocketAddress(*(cast(udtwrap.sockaddr*) res.ai_addr));
 	serv.bind(aiAddr);
 
 	writefln!"sendfile listening on port %s"(service);

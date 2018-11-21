@@ -5,13 +5,20 @@ import std.conv : to;
 import std.string : toStringz;
 import std.exception : enforce;
 
+
+version(Windows)
+	import core.sys.windows.winsock2: getaddrinfo, freeaddrinfo, addrinfo;
+else
+	import core.sys.posix.netdb: getaddrinfo, freeaddrinfo, addrinfo;
+
+
 int main(string[] args) {
 	if (args.length!=5) {
 		stderr.writeln("usage: recvfile server_ip server_port remote_filename local_filename");
 		return -1;
 	}
 
-	addrinfo hints; 
+	addrinfo hints;
 	addrinfo *peer;
 	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
 	hints.ai_family = AddressFamily.INET.to!int;
@@ -25,7 +32,7 @@ int main(string[] args) {
 	auto fhandle = UdtSocket.create(cast(AddressFamily)peer.ai_family, SocketType.STREAM, peer.ai_protocol);
 
 	// connect to the server, implict bind
-	auto socketAddr = SocketAddress(*peer.ai_addr);
+	auto socketAddr = SocketAddress(* cast(udtwrap.sockaddr*) peer.ai_addr);
 	fhandle.connect(socketAddr);
 	freeaddrinfo(peer);
 
