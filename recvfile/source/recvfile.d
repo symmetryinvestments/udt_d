@@ -18,23 +18,9 @@ int main(string[] args) {
 		return -1;
 	}
 
-	addrinfo hints;
-	addrinfo *peer;
-	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
-	hints.ai_family = AddressFamily.INET.to!int;
-	hints.ai_socktype = SocketType.STREAM.to!int;
-
-	if (0 != getaddrinfo(args[1].toStringz(), args[2].toStringz(), &hints, &peer)) {
-		writefln("incorrect server/peer address. %s:%s",args[1],args[2]);
-		return -1;
-	}
-
-	auto fhandle = UdtSocket.create(cast(AddressFamily)peer.ai_family, SocketType.STREAM, peer.ai_protocol);
-
-	// connect to the server, implict bind
-	auto socketAddr = SocketAddress(* cast(udtwrap.sockaddr*) peer.ai_addr);
-	fhandle.connect(socketAddr);
-	freeaddrinfo(peer);
+	auto fhandle = UdtSocket.create4(true);
+	auto address = new InternetAddress(args[1],args[2].to!ushort);
+	fhandle.connect(address);
 
 	// send name information of the requested file
 	int len = to!int(args[3].length);
