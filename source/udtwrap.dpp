@@ -4,7 +4,10 @@ import std.string:toStringz,fromStringz;
 import std.conv:to;
 import std.exception:enforce;
 import std.format:format;
-import std.socket:AddressInfoFlags,SocketType;
+static import std.socket;
+import std.socket:AddressInfoFlags,SocketType,Address,InternetAddress,Socket,ProtocolType;
+import std.stdio:File;
+import std.typecons:tuple;
 import std.traits : isArray;
 #include "udtc.h"
 #include <arpa/inet.h>
@@ -32,12 +35,6 @@ struct addrinfo
 
 
 
-struct SocketAddress
-{
-	sockaddr handle; // = sockaddr(AF_INET,9000,in_addr(INADDR_ANY));
-	alias handle this;
-
-}
 
 
 struct SocketAddressStorage {
@@ -103,7 +100,7 @@ private T getSocketOptionHelper(T)(UDTSOCKET socket, UDT_UDTOpt option)
 	T ret;
 	uint retSize=ret.sizeof;
 	int result = getsockopt(socket,0,option,cast(void*)&ret,&retSize);
-	enforce(result != UDT_ERROR, format!"error (%s) getting socket option %s for %s: %s"(result,option,socket,getLastError()));
+	enforce(option == Option.UDT_UDT_RCVDATA || option == Option.UDT_UDT_SNDDATA || result != UDT_ERROR, format!"error (%s) getting socket option %s for %s: %s"(result,option,socket,getLastError()));
 	return ret;
 }
 
@@ -120,10 +117,14 @@ private void setSocketOptionHelper(T)(UDTSOCKET socket, UDT_UDTOpt option, T val
     int udt_setsockopt(UDTSOCKET, int, int, const(void)*, int) @nogc nothrow;
 */
 
-struct SocketOptions
+final class SocketOptions
 {
-	@disable this(this);
 	UdtSocket socket;
+
+	this(UdtSocket socket)
+	{
+		this.socket = socket;
+	}
 
 	int maximumPacketSize()
 	{
@@ -327,37 +328,71 @@ struct TraceInfo {
 }
 
 
-struct UdtSocket
+final class UdtSocket
 {
 	UDTSOCKET handle = -1;
 	alias handle this;
-	//@disable this(this);
+
+	this(UDTSOCKET handle)
+	{
+		this.handle = handle;
+	}
+
+	int sizePendingDataSend()
+	{
+		return getSocketOptionHelper!int(handle,Option.UDT_UDT_SNDDATA);
+	}
+
+	int sizePendingDataReceive()
+	{
+		return getSocketOptionHelper!int(handle,Option.UDT_UDT_RCVDATA);
+	}
 
 	int state()
 	{
 		return udt_getsockstate(this.handle);
 	}
 
-	string toString()
+	bool wouldBlock()
 	{
-		return ""; // format!"UDT socket %s; peerName %s; socketName %s"(this.handle,this.peerName(),this.socketName());
+		return (state() == UDT_EASYNCRCV);
 	}
 
-	SocketAddress peerName()
+	bool isListening()
 	{
-		SocketAddress ret;
+		return state() == UDT_LISTENING;
+	}
+	
+	bool isConnecting()
+	{
+		return state() == UDT_CONNECTING;
+	}
+
+	bool isAlive()
+	{
+		return state() == UDT_CONNECTED;
+	}
+
+	override string toString()
+	{
+		return format!"UDT socket %s; peerName %s; socketName %s"(this.handle,this.peerName(),this.socketName());
+	}
+
+	InternetAddress peerName()
+	{
+		sockaddr_in addr;
 		int retLength;
-		int result = udt_getpeername(this.handle,&ret.handle,&retLength);
+		int result = udt_getpeername(this.handle,cast(sockaddr*)&addr,&retLength);
 		enforce(result != UDT_ERROR, format!"unable to get peername info: %s"(getLastError()));
-		return SocketAddress(ret.handle);
+		return new InternetAddress(cast(std.socket.sockaddr_in)addr);
 	}
 
-	SocketAddress socketName()
+	InternetAddress socketName()
 	{
-		SocketAddress ret;
+		sockaddr_in addr;
 		int retLength;
-		int result = udt_getsockname(this.handle,&ret.handle,&retLength);
-		return SocketAddress(ret.handle);
+		int result = udt_getsockname(this.handle,cast(sockaddr*)&addr,&retLength);
+		return new InternetAddress(cast(std.socket.sockaddr_in)addr);
 	}
 
 	ref TraceInfo perfMon(ref TraceInfo info, bool clear = true)
@@ -369,19 +404,30 @@ struct UdtSocket
 
 	auto ref options()
 	{
-		return SocketOptions(UdtSocket(this.handle));
+		return new SocketOptions(new UdtSocket(this.handle));
 	}
 
-	static auto create(AddressFamily addressFamily, SocketType socketType, int protocol)
+
+	static auto create4(bool stream)
+	{
+		return create(std.socket.AddressFamily.INET,stream?SocketType.STREAM:SocketType.DGRAM,ProtocolType.RAW);
+	}
+
+	static auto create6(bool stream)
+	{
+		return create(std.socket.AddressFamily.INET6,stream?SocketType.STREAM:SocketType.DGRAM,ProtocolType.RAW);
+	}
+
+	static auto create(std.socket.AddressFamily addressFamily, SocketType socketType, int protocol)
 	{
 		int result = udt_socket(addressFamily.to!int, socketType.to!int, protocol);
 		enforce(result != UDT_INVALID_SOCK, format!"unable to create UdtSocket: %s"(getLastError()));
-		return UdtSocket(result);
+		return new UdtSocket(result);
 	}
 
-	void bind(ref SocketAddress socketAddress)
+	void bind(InternetAddress socketAddress)
 	{
-		int result = udt_bind(this.handle, &socketAddress.handle, socketAddress.handle.sizeof);
+		int result = udt_bind(this.handle, cast(const(sockaddr)*)socketAddress.name, socketAddress.nameLen);
 		enforce(result != UDT_ERROR, format!"unable to bind to %s: %s"(socketAddress,getLastError()));
 	}
 
@@ -391,22 +437,24 @@ struct UdtSocket
 		enforce(result != UDT_ERROR, format!"unable to bind to UDP Socket %s: %s"(socket,getLastError()));
 	}
 
-	void connect(ref SocketAddress socketAddress)
+	void connect(InternetAddress internetAddress)
 	{
-		int result = udt_connect(this.handle,&socketAddress.handle,socketAddress.handle.sizeof);
-		enforce(result != UDT_ERROR, format!"unable to connect to %s: %s"(socketAddress,getLastError()));
+		int result = udt_connect(this.handle,cast(const(sockaddr)*) internetAddress.name, internetAddress.nameLen);
+		enforce(result != UDT_ERROR, format!"unable to connect to %s: %s"(internetAddress,getLastError()));
 	}
 
-	void listen(int something)
+	void listen(int backlog)
 	{
-		enforce(udt_listen(this.handle,something) != UDT_ERROR,format!"unable to bind to listen to %s: %s"(something,getLastError()));
+		enforce(udt_listen(this.handle,backlog) != UDT_ERROR,format!"unable to bind to listen to %s: %s"(backlog,getLastError()));
 	}
 
-	void accept(ref UdtSocket recver, ref SocketAddressStorage socketAddress)
+	auto accept()
 	{
-		int retLength;
-		recver.handle = udt_accept(this.handle, cast(sockaddr*)&socketAddress.handle, &retLength);
-		enforce(recver.handle != UDT_INVALID_SOCK, format!"unable to accept to %s: %s"(socketAddress,getLastError()));
+		sockaddr_in addr;
+		int addressLength;
+		handle = udt_accept(this.handle, cast(sockaddr*) &addr,&addressLength);
+		enforce(handle != UDT_INVALID_SOCK, format!"unable to accept : %s"(getLastError()));
+		return tuple(new UdtSocket(handle),new InternetAddress(cast(std.socket.sockaddr_in)addr));
 	}
 
 	int receive(T)(scope ref T data) if(!isArray!T && !is(T == ubyte[])) {
@@ -438,9 +486,9 @@ struct UdtSocket
 		return result;
 	}
 
-	auto send(scope ubyte[] data, int something)
+	auto send(scope ubyte[] data, int flags=0)
 	{
-		int result = udt_send(this.handle,cast(char*)data.ptr,data.length.to!int,something);
+		int result = udt_send(this.handle,cast(char*)data.ptr,data.length.to!int,flags);
 		enforce(result != UDT_ERROR, format!"unable to send data of length %s: %s"(data.length,getLastError()));
 		return result;
 	}
@@ -452,9 +500,9 @@ struct UdtSocket
 		return result;
 	}
 
-	auto sendMessage(scope ubyte[] data, int something1,int something2)
+	auto sendMessage(scope ubyte[] data, int ttl, bool inOrder = true)
 	{
-		int result = udt_sendmsg(this.handle,cast(char*)data.ptr,data.length.to!int,something1,something2);
+		int result = udt_sendmsg(this.handle,cast(char*)data.ptr,data.length.to!int,ttl,inOrder ? 1:0);
 		enforce(result != UDT_ERROR, format!"unable to send message of length %s: %s"(data.length,getLastError()));
 		return result;
 	}
@@ -494,3 +542,62 @@ struct UdtSocket
 			this.close();
 	}
 }
+
+void sendStream(Socket sourceSocket, UdtSocket targetSocket, size_t bufSize = 10_000_000)
+{
+	auto buf = new ubyte[bufSize];
+	ptrdiff_t numBytes = 0, sentBytes = 0;
+	while(sourceSocket.isAlive())
+	{
+		numBytes = sourceSocket.receive(cast(void[])buf);
+		if (numBytes > 0)
+		{
+			sentBytes = targetSocket.send(buf[0..numBytes]);
+			enforce(sentBytes == numBytes);
+		}
+	}
+}
+
+void sendStream(File sourceFile, UdtSocket socket, size_t bufSize = 10_000_000)
+{
+	foreach(ubyte[] buf; sourceFile.byChunk(new ubyte[bufSize]))
+	{
+		auto leftBuf = buf;
+		while(leftBuf.length>0)
+		{
+			auto bytesSent = socket.send(leftBuf);
+			leftBuf = leftBuf[bytesSent..$];
+		}
+	}
+}
+
+void receiveStream(UdtSocket sourceSocket, Socket targetSocket, size_t bufSize = 10_000_000)
+{
+	auto buf = new ubyte[bufSize];
+	while(sourceSocket.isAlive())
+	{
+		int numBytes = udt_recv(sourceSocket.handle,cast(char*)(buf.ptr), to!int(buf.length), 0);
+		if (numBytes <=0)
+			continue;
+		auto leftBuf = buf[0..numBytes];
+		while(leftBuf.length > 0)
+		{
+			auto bytesSent = targetSocket.send(leftBuf);
+			leftBuf = (bytesSent >=0) ? leftBuf[bytesSent .. $] : [];
+		}
+	}
+}
+
+void receiveStream(UdtSocket sourceSocket, File targetFile, size_t bufSize = 16384)
+{
+	auto buf = new ubyte[bufSize];
+	while(sourceSocket.isAlive())
+	{
+		int numBytes = udt_recv(sourceSocket.handle,cast(char*)(buf.ptr), to!int(buf.length), 0);
+		if (!sourceSocket.isAlive())
+			break;
+		if (numBytes > 0) targetFile.rawWrite(buf[0..numBytes]);
+	}
+}
+
+

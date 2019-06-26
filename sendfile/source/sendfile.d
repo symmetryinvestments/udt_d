@@ -1,64 +1,50 @@
 import udtwrap;
 
+import core.time:dur;
 import std.conv : to;
 import std.stdio : writeln, writefln;
-import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+import std.socket: InternetAddress;
 import std.string : toStringz, fromStringz;
 import std.exception : enforce;
+import std.getopt;
+import std.traits:ReturnType;
+import core.thread:Thread;
 
-version(Windows)
-	import core.sys.windows.winsock2: getaddrinfo, freeaddrinfo, addrinfo;
-else
-	import core.sys.posix.netdb: getaddrinfo, freeaddrinfo, addrinfo;
+int main(string[] args)
+{
+	ushort port = 9000;
 
+	auto helpInformation = getopt(args, "port",&port);
 
-int main(string[] args) {
-
-	if(args.length>2 || (args.length==2 && args[0].to!int <= 0)) {
-		writeln("usage: sendfile [server_port]");
-		return 0;
-	}
-
-	addrinfo hints;
-	addrinfo* res;
-
-	hints.ai_flags = AddressInfoFlags.PASSIVE.to!int;
-	hints.ai_family = AddressFamily.INET.to!int;
-	hints.ai_socktype = SocketType.STREAM.to!int;
-
-	string service="9000";
-	if(args.length == 2) {
-	   	service = args[1];
-	}
-
-	if(0 != getaddrinfo(null,
-						service.toStringz(),
-						&hints,
-						&res))
+	if (helpInformation.helpWanted)
 	{
-	   	writeln("illegal port number or port is busy.");
-	   	return -1;
+		writeln("usage: sendfile [server_port]");
+		return -1;
 	}
 
-	auto serv = UdtSocket.create(res.ai_family.to!AddressFamily,
-			to!SocketType(res.ai_socktype), res.ai_protocol);
-	auto aiAddr = SocketAddress(*(cast(udtwrap.sockaddr*) res.ai_addr));
-	serv.bind(aiAddr);
+	auto address = new InternetAddress("127.0.0.1",port);
+	auto serv = UdtSocket.create4(true);
+	serv.bind(address);
 
-	writefln!"sendfile listening on port %s"(service);
-
-	freeaddrinfo(res);
+	writefln!"sendfile listening on port %s"(port);
 
 	serv.listen(10);
-
-	SocketAddressStorage clientAddr;
-	UdtSocket fhandle;
-
 	while (true) {
 		import std.concurrency:spawn;
-		serv.accept(fhandle, clientAddr);
-		clientAddr.getNameInfo();
-		writefln!"new connection: %s:%s"(clientAddr.clientHost, clientAddr.clientService);
+	/+	if (!serv.isAlive)
+		{	
+			serv.bind(address);
+			enforce(serv.isAlive);
+		}
+	+/
+		ReturnType!(serv.accept) result;
+		while(serv.wouldBlock())
+			Thread.sleep(dur!"msecs"(50));
+
+		result = serv.accept();
+		auto fhandle = result[0];
+		auto clientAddr = result[1];
+		writefln!"new connection: %s:%s"(clientAddr.toHostNameString(),clientAddr.port);
 		spawn(&sendfile, cast(shared)&fhandle);
 	}
 }
@@ -69,7 +55,7 @@ void sendfile(shared(UdtSocket)* usocket) {
 	import std.exception : assumeUnique;
 	import std.format : format;
 
-	UdtSocket fhandle = *cast()usocket;
+	UdtSocket* fhandle = cast(UdtSocket*)usocket;
 
 	char[1024] file;
 	int len;
