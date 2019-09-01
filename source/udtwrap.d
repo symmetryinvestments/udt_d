@@ -2380,7 +2380,7 @@ struct TraceInfo {
 final class UdtSocket
 {
  UDTSOCKET handle = -1;
- alias handle this;
+
 
  this(UDTSOCKET handle)
  {
@@ -2647,4 +2647,22 @@ void receiveStream(UdtSocket sourceSocket, File targetFile, size_t bufSize = 163
    break;
   if (numBytes > 0) targetFile.rawWrite(buf[0..numBytes]);
  }
+}
+
+void pipeStreams(UdtSocket udtSocket, Socket socket, size_t bufSize = 10_000_000)
+{
+ import std.parallelism:scopedTask;
+ auto reader = scopedTask!receiveStream(udtSocket,socket,bufSize);
+ auto writer = scopedTask!sendStream(socket,udtSocket,bufSize);
+ reader.executeInNewThread();
+ writer.executeInNewThread();
+}
+
+void pipeStreams(UdtSocket udtSocket, File file, size_t bufSize = 10_000_000)
+{
+ import std.parallelism:scopedTask;
+ auto reader = scopedTask!receiveStream(udtSocket,file,bufSize);
+ auto writer = scopedTask!sendStream(file,udtSocket,bufSize);
+ reader.executeInNewThread();
+ writer.executeInNewThread();
 }

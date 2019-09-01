@@ -2,8 +2,8 @@ module udt.sendstream;
 import udtwrap;
 
 import std.conv : to;
-import std.stdio : writeln, writefln, stdin, stdout, stderr;
-import std.socket:AddressInfoFlags,AddressFamily,SocketType,InternetAddress;
+import std.stdio : writeln, writefln, stdin, stdout, stderr, File;
+import std.socket:AddressInfoFlags,AddressFamily,SocketType,InternetAddress,Socket;
 import std.string : toStringz, fromStringz;
 import std.exception : enforce;
 import std.getopt;
@@ -20,6 +20,9 @@ int main(string[] args)
 	ushort port = 9009;
 	size_t bufSize = 20_000_000;
 	enum backlog = 10;
+	ushort tcpPort = 0;
+	string tcpAddress = "127.0.0.1";
+	bool tcpBind = false;
 
 	auto helpInformation = getopt(args,
 			"recv",		&receiveMode,
@@ -30,14 +33,17 @@ int main(string[] args)
 			"port",		&port,
 			"bufsize",	&bufSize,
 			"filename", &filename,
+			"tcpaddress",&tcpAddress,
+			"tcpport", &tcpPort,
+			"tcpbind",&tcpBind,
 	);
-
+/+
 	if (receiveMode && sendMode)
 	{
 		stderr.writeln("cannot enable both --recv and --send for now\n");
 		helpInformation.helpWanted = true;
 	}
-
++/
 	if (bindMode && connectMode)
 	{
 		stderr.writeln("cannot enable both --bind and --connect");
@@ -50,6 +56,12 @@ int main(string[] args)
 		helpInformation.helpWanted = true;
 	}
 
+	if (filename.length > 0 && (tcpAddress!="127.0.0.1" || tcpPort!=0))
+	{
+		stderr.writefln("cannot specify filename and tcp address/port");
+		helpInformation.helpWanted = true;
+	}
+
 	if (helpInformation.helpWanted)
 	{
 		stderr.writeln("usage: udtstream <--bind | --connect> <--recv | --send> --address <address> --port <port>");
@@ -58,7 +70,32 @@ int main(string[] args)
 		return -1;
 	}
 
-	auto filehandle = (filename.length > 0) ? File(filename,sendMode ? "rb":"wb") : (sendMode?stdin:stdout);
+	File filehandle;
+	Socket tcpSocket;
+	if (filename.length >0)
+	{
+		filehandle = File(filename,sendMode ? "rb":"wb");
+	}
+	else if(tcpPort!=0)
+	{
+		auto tcpAddress4 = new InternetAddress(tcpAddress,tcpPort);
+		if (tcpBind)
+		{
+			tcpSocket.bind(tcpAddress4);
+			tcpSocket.listen(backlog);
+			auto newTcpSocket = tcpSocket.accept();
+			filehandle.fdopen(newTcpSocket.handle);
+		}
+		else
+		{
+			tcpSocket.connect(tcpAddress4);
+			filehandle.fdopen(tcpSocket.handle);
+		}
+	}
+	else
+	{
+		filehandle = sendMode ? stdin: stdout;
+	}
 	auto socket = UdtSocket.create4(true);
 	auto address = new InternetAddress(addr,port);
 	if (bindMode)
@@ -69,13 +106,17 @@ int main(string[] args)
 		auto socket2 = result[0];
 		auto clientAddr = result[1];
 		stderr.writefln!"new connection: %s:%s"(clientAddr.toHostNameString, clientAddr.port);
-		if(sendMode)
+		if(sendMode && !receiveMode)
 		{
 			sendStream(filehandle,socket2,bufSize);
 		}
-		else
+		else if (!sendMode && receiveMode)
 		{
 			receiveStream(socket2,filehandle,bufSize);
+		}
+		else // two-way pipe
+		{
+			pipeStreams(socket2,filehandle,bufSize);
 		}
 		socket2.close();
 		socket.close();
@@ -84,15 +125,19 @@ int main(string[] args)
 	else if (connectMode)
 	{
 		socket.connect(address);
-		if(sendMode)
+		if(sendMode && !receiveMode)
 		{
 			sendStream(filehandle,socket,bufSize);
 			socket.close();
 		}
-		else
+		else if (!sendMode && receiveMode)
 		{
 			receiveStream(socket,filehandle,bufSize);
 			socket.close();
+		}
+		else // two-way pipe
+		{
+			pipeStreams(socket,filehandle,bufSize);
 		}
 	}
 	filehandle.flush();
