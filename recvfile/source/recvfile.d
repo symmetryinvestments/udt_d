@@ -1,6 +1,6 @@
 import std.stdio;
 import udtwrap;
-import std.socket:AddressInfoFlags,AddressFamily,SocketType;
+import std.socket : AddressInfoFlags, AddressFamily, SocketType, InternetAddress;
 import std.conv : to;
 import std.string : toStringz;
 import std.exception : enforce;

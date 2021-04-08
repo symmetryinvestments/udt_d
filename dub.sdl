@@ -8,3 +8,13 @@ targetType "library"
 targetName "udtwrap"
 
 preBuildCommands "$PACKAGE_DIR/build/dpp_translate.sh" platform="linux"
+
+configuration "library" {
+    targetType "library"
+}
+
+configuration "unittest" {
+    targetType "executable"
+    libs "udt"
+    dflags "-dip1000" "-dip25"
+}

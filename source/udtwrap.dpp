@@ -44,11 +44,11 @@ struct SocketAddressStorage {
 	private char[NI_MAXHOST] clienthost;
 	private char[NI_MAXSERV] clientservice;
 
-	@property char[] clientHost() {
+	@property char[] clientHost() return {
 		return fromStringz(this.clienthost.ptr);
 	}
 
-	@property char[] clientService() {
+	@property char[] clientService() return {
 		return fromStringz(this.clientservice.ptr);
 	}
 
@@ -395,7 +395,7 @@ final class UdtSocket
 		return new InternetAddress(cast(std.socket.sockaddr_in)addr);
 	}
 
-	ref TraceInfo perfMon(ref TraceInfo info, bool clear = true)
+	ref TraceInfo perfMon(return ref TraceInfo info, bool clear = true)
 	{
 		int result = udt_perfmon(this.handle, &info.handle, clear);
 		enforce(result != UDT_ERROR, format!"unable to get perfmon info: %s"(getLastError()));
